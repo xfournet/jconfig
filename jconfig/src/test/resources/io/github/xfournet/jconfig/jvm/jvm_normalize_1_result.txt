@@ -1,0 +1,12 @@
+-server
+
+-DpropertyA
+-DpropertyB
+-DpropertyX=1234
+-DpropertyY=456
+
+# Display JVM values
+-XX:+PrintFlagsFinal
+
+# Set Heap size
+-Xmx512M

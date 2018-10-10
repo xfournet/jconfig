@@ -4,14 +4,14 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.github.xfournet.jconf</groupId>
-    <artifactId>jconf-parent</artifactId>
+    <groupId>io.github.xfournet.jconfig</groupId>
+    <artifactId>jconfig-parent</artifactId>
     <version>${revision}</version>
     <packaging>pom</packaging>
     <name>${project.artifactId}</name>
-    <description>JConf parent POM</description>
+    <description>JConfig parent POM</description>
 
-    <url>https://xfournet.github.io/jconf</url>
+    <url>https://xfournet.github.io/jconfig</url>
 
     <properties>
         <revision>0.1.0-SNAPSHOT</revision>
@@ -42,18 +42,18 @@
     </developers>
 
     <scm>
-        <connection>scm:git:https://github.com/xfournet/jconf.git</connection>
-        <developerConnection>scm:git:https://github.com/xfournet/jconf.git</developerConnection>
-        <url>https://github.com/xfournet/jconf</url>
+        <connection>scm:git:https://github.com/xfournet/jconfig.git</connection>
+        <developerConnection>scm:git:https://github.com/xfournet/jconfig.git</developerConnection>
+        <url>https://github.com/xfournet/jconfig</url>
     </scm>
 
     <issueManagement>
-        <url>https://github.com/xfournet/jconf/issues</url>
+        <url>https://github.com/xfournet/jconfig/issues</url>
         <system>GitHub</system>
     </issueManagement>
 
     <ciManagement>
-        <url>https://travis-ci.org/xfournet/jconf</url>
+        <url>https://travis-ci.org/xfournet/jconfig</url>
         <system>Travis CI</system>
     </ciManagement>
 
@@ -65,7 +65,8 @@
     </distributionManagement>
 
     <modules>
-        <module>jconf</module>
+        <module>jconfig</module>
+        <module>jconfig-cli</module>
     </modules>
 
     <dependencyManagement>
@@ -74,6 +75,11 @@
                 <groupId>com.google.code.findbugs</groupId>
                 <artifactId>jsr305</artifactId>
                 <version>3.0.2</version>
+            </dependency>
+            <dependency>
+                <groupId>com.beust</groupId>
+                <artifactId>jcommander</artifactId>
+                <version>1.72</version>
             </dependency>
             <dependency>
                 <groupId>org.testng</groupId>
@@ -90,8 +96,13 @@
 
             <!-- own modules -->
             <dependency>
-                <groupId>io.xfournet.jconf</groupId>
-                <artifactId>jconf</artifactId>
+                <groupId>io.github.xfournet.jconfig</groupId>
+                <artifactId>jconfig</artifactId>
+                <version>${revision}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.github.xfournet.jconfig</groupId>
+                <artifactId>jconfig-cli</artifactId>
                 <version>${revision}</version>
             </dependency>
         </dependencies>

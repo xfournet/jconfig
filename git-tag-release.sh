@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-GIT_URL=https://github.com/xfournet/jconf.git
+GIT_URL=https://github.com/xfournet/jconfig.git
 
 (git diff-index --quiet HEAD --) || (echo "There are uncommitted changes in the Git working directory, aborting)" && false)
 (git symbolic-ref --short HEAD)  || (echo "The working copy is in a detached HEAD state, aborting)" && false)

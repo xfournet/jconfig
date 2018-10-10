@@ -15,5 +15,5 @@ cache:
     - '$HOME/.sonar/cache'
 
 before_cache:
-  - rm -rf "$HOME/.m2/repository/io/xfournet/jconf"
+  - rm -rf "$HOME/.m2/repository/io/xfournet/jconfig"
 

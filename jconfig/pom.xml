@@ -5,13 +5,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.github.xfournet.jconf</groupId>
-        <artifactId>jconf-parent</artifactId>
+        <groupId>io.github.xfournet.jconfig</groupId>
+        <artifactId>jconfig-parent</artifactId>
         <version>${revision}</version>
     </parent>
 
-    <artifactId>jconf</artifactId>
+    <artifactId>jconfig</artifactId>
     <name>${project.artifactId}</name>
-    <description>JConf</description>
+    <description>JConfig</description>
 
 </project>

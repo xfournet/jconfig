@@ -1,2 +1,3 @@
-# jconf
+# JConfig
+
 Java files configuration tools
