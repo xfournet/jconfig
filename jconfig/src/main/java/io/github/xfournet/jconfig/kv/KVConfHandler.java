@@ -23,6 +23,15 @@ public abstract class KVConfHandler<K> implements FileHandler {
     }
 
     @Override
+    public void apply(Path file, List<String> instructions, Path destination) {
+        KVConf<K> conf = readConf(file);
+
+        conf.apply(instructions, m_entryParser);
+
+        writeConf(destination, conf);
+    }
+
+    @Override
     public void mergeFiles(Path source1, Path source2, Path destination) {
         KVConf<K> conf1 = readConf(source1);
         KVConf<K> conf2 = readConf(source2);
@@ -33,30 +42,25 @@ public abstract class KVConfHandler<K> implements FileHandler {
     }
 
     @Override
-    public void apply(Path file, List<String> instructions, Path destination) {
+    public void setEntries(Path file, Path destination, List<String> entries) {
         KVConf<K> conf = readConf(file);
 
-        conf.apply(instructions, m_entryParser);
+        entries.forEach(entry -> {
+            KVEntry<K> parsedEntry = m_entryParser.apply(entry);
+            conf.setEntry(parsedEntry);
+        });
 
         writeConf(destination, conf);
     }
 
     @Override
-    public void setEntry(Path file, String entry, Path destination) {
+    public void removeEntries(Path file, Path destination, List<String> entries) {
         KVConf<K> conf = readConf(file);
 
-        KVEntry<K> parsedEntry = m_entryParser.apply(entry);
-        conf.setEntry(parsedEntry);
-
-        writeConf(destination, conf);
-    }
-
-    @Override
-    public void removeEntry(Path file, String entry, Path destination) {
-        KVConf<K> conf = readConf(file);
-
-        KVEntry<K> parsedEntry = m_entryParser.apply(entry);
-        conf.removeEntry(parsedEntry.getKey());
+        entries.forEach(entry -> {
+            KVEntry<K> parsedEntry = m_entryParser.apply(entry);
+            conf.removeEntry(parsedEntry.getKey());
+        });
 
         writeConf(destination, conf);
     }

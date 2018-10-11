@@ -9,13 +9,13 @@ public interface FileHandler {
 
     Charset getCharset();
 
-    void mergeFiles(Path source1, Path source2, Path destination);
-
     void apply(Path file, List<String> instructions, Path destination);
 
-    void setEntry(Path file, String entry, Path destination);
+    void mergeFiles(Path source1, Path source2, Path destination);
 
-    void removeEntry(Path file, String entry, Path destination);
+    void setEntries(Path file, Path destination, List<String> entries);
+
+    void removeEntries(Path file, Path destination, List<String> entries);
 
     void normalize(Path file, Path destination);
 }

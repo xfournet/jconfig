@@ -8,6 +8,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
+import static java.util.Collections.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class JvmConfHandlerTest {
@@ -44,7 +45,7 @@ public class JvmConfHandlerTest {
         Path source = resourceToPath(root, sourceName);
         Path expectedResult = resourceToPath(root, expectedResultName);
 
-        new JvmConfHandler().setEntry(source, entry, source);
+        new JvmConfHandler().setEntries(source, source, singletonList(entry));
 
         assertThat(source).hasSameContentAs(expectedResult);
     }
@@ -61,7 +62,7 @@ public class JvmConfHandlerTest {
         Path source = resourceToPath(root, sourceName);
         Path expectedResult = resourceToPath(root, expectedResultName);
 
-        new JvmConfHandler().removeEntry(source, entry, source);
+        new JvmConfHandler().removeEntries(source, source, singletonList(entry));
 
         assertThat(source).hasSameContentAs(expectedResult);
     }

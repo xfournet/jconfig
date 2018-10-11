@@ -35,25 +35,28 @@ public class JConfigImpl implements JConfig {
     }
 
     @Override
-    public void setEntry(Path file, String entry) {
+    public void setEntries(Path file, List<String> entries) {
+        FileHandler fileHandler = retrieveFileHandler(file);
         try (Transaction tx = new Transaction()) {
-            retrieveFileHandler(file).setEntry(file, entry, tx.getOutputFile(file));
+            fileHandler.setEntries(file, tx.getOutputFile(file), entries);
             tx.commit();
         }
     }
 
     @Override
-    public void removeEntry(Path file, String entry) {
+    public void removeEntries(Path file, List<String> entries) {
+        FileHandler fileHandler = retrieveFileHandler(file);
         try (Transaction tx = new Transaction()) {
-            retrieveFileHandler(file).removeEntry(file, entry, tx.getOutputFile(file));
+            fileHandler.removeEntries(file, tx.getOutputFile(file), entries);
             tx.commit();
         }
     }
 
     @Override
     public void normalize(Path file) {
+        FileHandler fileHandler = retrieveFileHandler(file);
         try (Transaction tx = new Transaction()) {
-            retrieveFileHandler(file).normalize(file, tx.getOutputFile(file));
+            fileHandler.normalize(file, tx.getOutputFile(file));
             tx.commit();
         }
     }
