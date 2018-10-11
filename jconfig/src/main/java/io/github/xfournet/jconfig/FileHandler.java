@@ -20,6 +20,7 @@ public interface FileHandler {
         throw new UnsupportedOperationException();
     }
 
+    @Nullable
     default Section diff(Path file, String fileName, @Nullable Path referenceFile) {
         throw new UnsupportedOperationException();
     }

@@ -103,10 +103,13 @@ public class JConfigImpl implements JConfig {
                 Path currentFile = directory.resolve(path);
                 Path referenceFile = refPaths.contains(path) ? referenceDir.resolve(path) : null;
                 FileHandler fileHandler = retrieveFileHandler(currentFile);
-                sections.add(fileHandler.diff(currentFile, path, referenceFile));
+                Section diff = fileHandler.diff(currentFile, path, referenceFile);
+                if (diff != null) {
+                    sections.add(diff);
+                }
             } else {
                 // file deleted
-                sections.add(new Section(path, Section.Mode.DELETE, null, singletonList("")));
+                sections.add(new Section(path, Section.Mode.DELETE, null, emptyList()));
             }
         });
 

@@ -48,6 +48,9 @@ public abstract class KVConfHandler<K> implements FileHandler {
         if (referenceFile != null) {
             mode = APPLY;
             lines = generateDiff(file, referenceFile);
+            if (lines.isEmpty()) {
+                return null;
+            }
         } else {
             // no reference file, don't need to generate a diff
             mode = OVERWRITE;
