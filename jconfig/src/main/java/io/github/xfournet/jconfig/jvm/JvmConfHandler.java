@@ -9,7 +9,7 @@ import io.github.xfournet.jconfig.kv.KVEntry;
 public final class JvmConfHandler extends KVConfHandler<JvmConfEntryKey> {
 
     public JvmConfHandler() {
-        super(Charset.defaultCharset(), JvmConfHandler::parse, JvmConfHandler::format);
+        super(Charset.defaultCharset(), JvmConfHandler::parse, JvmConfHandler::format, JvmConfHandler::formatKey);
     }
 
     @Override
@@ -34,5 +34,10 @@ public final class JvmConfHandler extends KVConfHandler<JvmConfEntryKey> {
         JvmConfEntryType type = key.getType();
 
         return type.format(key.getKey(), entry.getValue());
+    }
+
+    private static String formatKey(JvmConfEntryKey key) {
+        JvmConfEntryType type = key.getType();
+        return type.format(key.getKey(), "");
     }
 }

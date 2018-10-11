@@ -7,11 +7,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.atomic.*;
+import java.util.function.*;
 import java.util.regex.*;
 import java.util.stream.*;
 import javax.annotation.*;
 import io.github.xfournet.jconfig.FileHandler;
 import io.github.xfournet.jconfig.JConfig;
+import io.github.xfournet.jconfig.Section;
 import io.github.xfournet.jconfig.jvm.JvmConfHandler;
 import io.github.xfournet.jconfig.properties.PropertiesHandler;
 import io.github.xfournet.jconfig.raw.RawFileHandler;
@@ -19,12 +21,33 @@ import io.github.xfournet.jconfig.raw.RawFileHandler;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.*;
 import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
+import static java.util.Collections.*;
 
 public class JConfigImpl implements JConfig {
     private static final Charset INI_CHARSET = UTF_8;
     private static final Pattern SECTION_MARKER = Pattern.compile("^\\[(.+)]( +#.*)?$");
 
     private final List<FileHandler> m_fileHandlers = Arrays.asList(new JvmConfHandler(), new PropertiesHandler(), new RawFileHandler());
+
+    @Override
+    public void apply(Path targetDir, Path iniFile) {
+        try (Transaction tx = new Transaction()) {
+            List<Section> sections = parseSections(iniFile);
+            sections.forEach(section -> processSection(tx, section, targetDir));
+
+            tx.commit();
+        }
+    }
+
+    @Override
+    public void diff(Path directory, Path referenceDir, Predicate<String> pathFilter, Path diffFile) {
+        try (Transaction tx = new Transaction()) {
+            List<Section> sections = generateSections(directory, referenceDir, pathFilter);
+            writeSections(sections, tx.getOutputFile(diffFile));
+
+            tx.commit();
+        }
+    }
 
     @Override
     public void mergeFiles(Path source1, Path source2, Path destination) {
@@ -61,23 +84,79 @@ public class JConfigImpl implements JConfig {
         }
     }
 
-    @Override
-    public void apply(Path iniFile, Path targetDir) {
-        try (Transaction tx = new Transaction()) {
-            Map<String, List<String>> sections = parseSections(iniFile);
-            sections.forEach((section, lines) -> processSection(tx, section, lines, targetDir));
-
-            tx.commit();
-        }
-    }
-
     private static boolean isContentLine(String line) {
         // traditional .ini file comment mark is ';' , add support of traditional '#' also
         return !line.isEmpty() && !(line.startsWith("#") || line.startsWith(";"));
     }
 
-    private Map<String, List<String>> parseSections(Path iniFile) {
-        Map<String, List<String>> sections = new LinkedHashMap<>();
+    private List<Section> generateSections(Path directory, Path referenceDir, Predicate<String> pathFilter) {
+        List<Section> sections = new ArrayList<>();
+
+        Set<String> dirPaths = walkDirectory(directory, pathFilter);
+        Set<String> refPaths = walkDirectory(referenceDir, pathFilter);
+
+        Set<String> allPaths = new TreeSet<>();
+        allPaths.addAll(dirPaths);
+        allPaths.addAll(refPaths);
+
+        allPaths.forEach(path -> {
+            if (dirPaths.contains(path)) {
+                Path currentFile = directory.resolve(path);
+                Path referenceFile = refPaths.contains(path) ? referenceDir.resolve(path) : null;
+                FileHandler fileHandler = retrieveFileHandler(currentFile);
+                sections.add(fileHandler.diff(currentFile, path, referenceFile));
+            } else {
+                // file deleted
+                sections.add(new Section(path, Section.Mode.DELETE, null, singletonList("")));
+            }
+        });
+
+        return sections;
+    }
+
+    private Set<String> walkDirectory(Path dir, Predicate<String> pathFilter) {
+        int pathIndex = dir.toString().length() + 1;
+        try (Stream<Path> walk = Files.walk(dir)) {
+            return walk //
+                    .filter(p -> Files.isRegularFile(p)) //
+                    .map(p -> p.toString().substring(pathIndex).replace("\\", "/")) //
+                    .filter(pathFilter) //
+                    .collect(Collectors.toSet());
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private void writeSections(List<Section> sections, Path outputFile) {
+        try (PrintWriter pw = new PrintWriter(Files.newBufferedWriter(outputFile, INI_CHARSET))) {
+            sections.forEach(section -> {
+                String mode = "";
+                switch (section.getMode()) {
+                    case APPLY:
+                        mode = " apply";
+                        break;
+                    case DELETE:
+                        mode = " delete";
+                        break;
+                }
+                String encoding = section.getEncoding();
+                if (encoding != null) {
+                    encoding = " @" + encoding.toLowerCase();
+                } else {
+                    encoding = "";
+                }
+
+                pw.printf("[%s%s%s]%n", section.getFilePath(), mode, encoding);
+                section.getLines().forEach(pw::println);
+                pw.println();
+            });
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
+
+    private List<Section> parseSections(Path iniFile) {
+        List<Section> sections = new ArrayList<>();
 
         try (Stream<String> lines = Files.lines(iniFile, INI_CHARSET)) {
             AtomicReference<String> currentSectionRef = new AtomicReference<>();
@@ -89,7 +168,7 @@ public class JConfigImpl implements JConfig {
                 Matcher matcher = SECTION_MARKER.matcher(line);
                 if (matcher.matches()) {
                     if (currentSection != null) {
-                        sections.put(currentSection, trimSection(sectionLines));
+                        sections.add(buildSection(currentSection, sectionLines));
                     }
                     currentSectionRef.set(matcher.group(1));
                     sectionLines.clear();
@@ -106,7 +185,7 @@ public class JConfigImpl implements JConfig {
 
             String currentSection = currentSectionRef.get();
             if (currentSection != null) {
-                sections.put(currentSection, trimSection(sectionLines));
+                sections.add(buildSection(currentSection, sectionLines));
             }
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -115,47 +194,47 @@ public class JConfigImpl implements JConfig {
         return sections;
     }
 
-    private List<String> trimSection(List<String> lines) {
-        while (!lines.isEmpty() && lines.get(lines.size() - 1).isEmpty()) {
-            lines.remove(lines.size() - 1);
+    private Section buildSection(String currentSection, List<String> sectionLines) {
+        // trim section lines
+        while (!sectionLines.isEmpty() && sectionLines.get(sectionLines.size() - 1).isEmpty()) {
+            sectionLines.remove(sectionLines.size() - 1);
         }
 
-        return new ArrayList<>(lines);
-    }
-
-    private void processSection(Transaction tx, String section, List<String> lines, Path target) {
-        String[] elements = section.split(" +");
+        String[] elements = currentSection.split(" +");
         if (elements.length < 1 || elements.length > 2) {
-            throw new IllegalArgumentException("Invalid INI section : " + section);
+            throw new IllegalArgumentException("Invalid INI section header : " + currentSection);
         }
 
         String fileName = elements[0];
-        boolean apply = false;
-        boolean delete = false;
-        boolean base64 = false;
-        Charset charset = null;
+        Section.Mode mode = Section.Mode.OVERWRITE;
+        String encoding = null;
         if (elements.length > 1) {
             String element = elements[1];
             if ("apply".equalsIgnoreCase(element)) {
-                apply = true;
+                mode = Section.Mode.APPLY;
             } else if ("delete".equalsIgnoreCase(element)) {
-                delete = true;
-            } else if ("@base64".equalsIgnoreCase(element)) {
-                base64 = true;
+                mode = Section.Mode.DELETE;
             } else if (element.startsWith("@")) {
-                charset = Charset.forName(element.substring(1));
+                encoding = element.substring(1);
             }
         }
 
-        Path file = target.resolve(fileName);
-        if (delete) {
-            handleDelete(tx, file, lines);
-        } else {
-            if (apply) {
-                handleApply(tx, file, lines);
-            } else {
-                handleOverride(tx, file, lines, base64, charset);
-            }
+        return new Section(fileName, mode, encoding, new ArrayList<>(sectionLines));
+    }
+
+    private void processSection(Transaction tx, Section section, Path target) {
+
+        Path file = target.resolve(section.getFilePath());
+        switch (section.getMode()) {
+            case DELETE:
+                handleDelete(tx, file, section.getLines());
+                break;
+            case APPLY:
+                handleApply(tx, file, section.getLines());
+                break;
+            case OVERWRITE:
+                handleOverride(tx, file, section.getLines(), section.getEncoding());
+                break;
         }
     }
 
@@ -167,12 +246,12 @@ public class JConfigImpl implements JConfig {
         tx.deleteFile(file);
     }
 
-    private void handleOverride(Transaction tx, Path file, List<String> lines, boolean base64, @Nullable Charset charset) {
+    private void handleOverride(Transaction tx, Path file, List<String> lines, @Nullable String encoding) {
         Path outputFile = tx.getOutputFile(file);
         try {
             Files.createDirectories(outputFile.getParent());
 
-            if (base64) {
+            if ("base64".equals(encoding)) {
                 Base64.Decoder decoder = Base64.getDecoder();
                 try (OutputStream out = new BufferedOutputStream(Files.newOutputStream(outputFile, TRUNCATE_EXISTING))) {
                     for (String line : lines) {
@@ -182,7 +261,10 @@ public class JConfigImpl implements JConfig {
                     throw new UncheckedIOException(e);
                 }
             } else {
-                if (charset == null) {
+                Charset charset;
+                if (encoding != null) {
+                    charset = Charset.forName(encoding);
+                } else {
                     charset = retrieveFileHandler(file).getCharset();
                 }
                 Files.write(outputFile, lines, charset);
@@ -216,7 +298,10 @@ public class JConfigImpl implements JConfig {
             Path tmpFile = Paths.get(file.toString() + "." + m_id + ".tmp");
             m_actions.add(new TempFile(file, tmpFile));
             try {
-                Files.createDirectories(tmpFile.getParent());
+                Path parent = tmpFile.getParent();
+                if (parent != null) {
+                    Files.createDirectories(parent);
+                }
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }

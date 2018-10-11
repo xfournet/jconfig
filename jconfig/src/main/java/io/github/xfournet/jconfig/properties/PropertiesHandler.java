@@ -8,7 +8,7 @@ import io.github.xfournet.jconfig.kv.KVEntry;
 public final class PropertiesHandler extends KVConfHandler<String> {
 
     public PropertiesHandler() {
-        super(StandardCharsets.ISO_8859_1, PropertiesHandler::parse, PropertiesHandler::format);
+        super(StandardCharsets.ISO_8859_1, PropertiesHandler::parse, PropertiesHandler::format, s -> s);
     }
 
     @Override

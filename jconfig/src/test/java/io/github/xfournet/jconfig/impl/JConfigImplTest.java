@@ -42,7 +42,7 @@ public class JConfigImplTest {
         }
 
         JConfig jConfig = JConfig.newJConfig();
-        jConfig.apply(iniFile, testDir);
+        jConfig.apply(testDir, iniFile);
 
         Set<Path> validatedTestFiles = new HashSet<>();
 

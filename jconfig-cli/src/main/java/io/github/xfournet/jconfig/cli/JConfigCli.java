@@ -3,12 +3,14 @@ package io.github.xfournet.jconfig.cli;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.function.*;
 import javax.annotation.*;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.ParameterException;
 import com.beust.jcommander.Parameters;
 import io.github.xfournet.jconfig.JConfig;
 import io.github.xfournet.jconfig.cli.command.ApplyCommand;
+import io.github.xfournet.jconfig.cli.command.DiffCommand;
 import io.github.xfournet.jconfig.cli.command.HelpCommand;
 import io.github.xfournet.jconfig.cli.command.MergeCommand;
 import io.github.xfournet.jconfig.cli.command.NormalizeCommand;
@@ -25,20 +27,23 @@ public class JConfigCli {
 
     private final String m_programName;
     private final Path m_targetRoot;
+    private final Predicate<String> m_diffPathFilter;
 
     public JConfigCli(String programName) {
-        this(programName, Paths.get(""));
+        this(programName, Paths.get(""), s -> true);
     }
 
-    public JConfigCli(String programName, Path targetRoot) {
+    public JConfigCli(String programName, Path targetRoot, Predicate<String> diffPathFilter) {
         m_programName = programName;
         m_targetRoot = targetRoot;
+        m_diffPathFilter = diffPathFilter;
     }
 
     public boolean run(String[] args) {
         Map<String, Command> commandTable = new LinkedHashMap<>();
 
         addCommand(commandTable, new ApplyCommand());
+        addCommand(commandTable, new DiffCommand());
         addCommand(commandTable, new MergeCommand());
         addCommand(commandTable, new RemoveCommand());
         addCommand(commandTable, new SetCommand());
@@ -102,7 +107,7 @@ public class JConfigCli {
         }
     }
 
-    private static final class CommandExecutorImpl implements CommandExecutor {
+    private final class CommandExecutorImpl implements CommandExecutor {
         private final JConfig m_jConfig = JConfig.newJConfig();
         private final JCommander m_jc;
         private final Path m_targetRoot;
@@ -118,7 +123,14 @@ public class JConfigCli {
 
         @Override
         public void apply(@Nullable String dir, String confFile) {
-            m_jConfig.apply(Paths.get(confFile), resolveTargetDir(dir));
+            Path targetDir = resolveTargetDir(dir);
+            m_jConfig.apply(targetDir, Paths.get(confFile));
+        }
+
+        @Override
+        public void diff(@Nullable String dir, String referenceDir, String confFile) {
+            Path targetFile = resolveTargetDir(dir);
+            m_jConfig.diff(targetFile, Paths.get(referenceDir), m_diffPathFilter, Paths.get(confFile));
         }
 
         @Override
@@ -140,7 +152,7 @@ public class JConfigCli {
         }
 
         @Override
-        public void normalize(String dir, String file) {
+        public void normalize(@Nullable String dir, String file) {
             Path targetFile = resolveTargetDir(dir).resolve(file);
             m_jConfig.normalize(targetFile);
         }

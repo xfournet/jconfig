@@ -153,4 +153,35 @@ class KVConf<K> {
             }
         }
     }
+
+    List<String> diffFrom(KVConf<K> refConf, Function<KVEntry<K>, String> entryFormatter, Function<K, String> keyFormatter) {
+        List<String> lines = new ArrayList<>();
+
+        // generate remove instructions
+        lines.addAll( //
+                      refConf.m_entriesByKey.keySet().stream() //
+                              .filter(k -> !m_entriesByKey.containsKey(k)) //
+                              .map(k -> "-remove " + keyFormatter.apply(k)) //
+                              .collect(Collectors.toList()));
+
+        // generate set instructions
+        lines.addAll( //
+                      m_entries.stream() //
+                              .filter(entry -> {
+                                  KVEntry<K> refEntry = refConf.m_entriesByKey.get(entry.getKey());
+                                  return refEntry == null || !Objects.equals(entry.getValue(), refEntry.getValue());
+                              }) //
+                              .flatMap(entry -> {
+                                  List<String> entryLines = new ArrayList<>(entry.getComments());
+                                  String entryStr = entryFormatter.apply(entry);
+                                  if (entryStr.startsWith("-remove") || entryStr.startsWith("-set")) {
+                                      entryStr = "-set " + entryStr;
+                                  }
+                                  entryLines.add(entryStr);
+                                  return entryLines.stream();
+                              }) //
+                              .collect(Collectors.toList()));
+
+        return lines;
+    }
 }

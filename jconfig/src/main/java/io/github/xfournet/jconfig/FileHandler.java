@@ -3,19 +3,40 @@ package io.github.xfournet.jconfig;
 import java.nio.charset.Charset;
 import java.nio.file.Path;
 import java.util.*;
+import javax.annotation.*;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public interface FileHandler {
-    boolean canHandle(Path file);
+    default boolean canHandle(Path file) {
+        return false;
+    }
 
-    Charset getCharset();
+    default Charset getCharset() {
+        return UTF_8;
+    }
 
-    void apply(Path file, List<String> instructions, Path destination);
+    default void apply(Path file, List<String> instructions, Path destination) {
+        throw new UnsupportedOperationException();
+    }
 
-    void mergeFiles(Path source1, Path source2, Path destination);
+    default Section diff(Path file, String fileName, @Nullable Path referenceFile) {
+        throw new UnsupportedOperationException();
+    }
 
-    void setEntries(Path file, Path destination, List<String> entries);
+    default void mergeFiles(Path source1, Path source2, Path destination) {
+        throw new UnsupportedOperationException();
+    }
 
-    void removeEntries(Path file, Path destination, List<String> entries);
+    default void setEntries(Path file, Path destination, List<String> entries) {
+        throw new UnsupportedOperationException();
+    }
 
-    void normalize(Path file, Path destination);
+    default void removeEntries(Path file, Path destination, List<String> entries) {
+        throw new UnsupportedOperationException();
+    }
+
+    default void normalize(Path file, Path destination) {
+        throw new UnsupportedOperationException();
+    }
 }
