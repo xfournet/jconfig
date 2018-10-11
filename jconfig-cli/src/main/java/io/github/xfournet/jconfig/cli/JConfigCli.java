@@ -26,28 +26,23 @@ public class JConfigCli {
     }
 
     private final String m_programName;
-    private final Path m_targetRoot;
     private final Predicate<String> m_diffPathFilter;
 
     public JConfigCli(String programName) {
-        this(programName, Paths.get(""), s -> true);
+        this(programName, s -> true);
     }
 
-    public JConfigCli(String programName, Path targetRoot, Predicate<String> diffPathFilter) {
+    public JConfigCli(String programName, Predicate<String> diffPathFilter) {
         m_programName = programName;
-        m_targetRoot = targetRoot;
         m_diffPathFilter = diffPathFilter;
     }
 
     public boolean run(String[] args) {
         Map<String, Command> commandTable = new LinkedHashMap<>();
 
-        addCommand(commandTable, new ApplyCommand());
-        addCommand(commandTable, new DiffCommand());
-        addCommand(commandTable, new MergeCommand());
-        addCommand(commandTable, new RemoveCommand());
-        addCommand(commandTable, new SetCommand());
-        addCommand(commandTable, new NormalizeCommand());
+        for (Command command : getCommands()) {
+            addCommand(commandTable, command);
+        }
 
         HelpCommand helpCommand = new HelpCommand();
         addCommand(commandTable, helpCommand);
@@ -83,13 +78,17 @@ public class JConfigCli {
         }
 
         try {
-            command.execute(new CommandExecutorImpl(jc, m_targetRoot));
+            command.execute(new CommandExecutorImpl(jc));
         } catch (JConfigException e) {
             System.err.printf(m_programName + ": %s%n", e.getMessage());
             return false;
         }
 
         return error == null;
+    }
+
+    protected List<Command> getCommands() {
+        return Arrays.asList(new ApplyCommand(), new DiffCommand(), new MergeCommand(), new RemoveCommand(), new SetCommand(), new NormalizeCommand());
     }
 
     private void addCommand(Map<String, Command> commandTable, Command command) {
@@ -110,15 +109,13 @@ public class JConfigCli {
     private final class CommandExecutorImpl implements CommandExecutor {
         private final JConfig m_jConfig = JConfig.newJConfig();
         private final JCommander m_jc;
-        private final Path m_targetRoot;
 
-        CommandExecutorImpl(JCommander jc, Path targetRoot) {
+        CommandExecutorImpl(JCommander jc) {
             m_jc = jc;
-            m_targetRoot = targetRoot;
         }
 
         private Path resolveTargetDir(@Nullable String name) {
-            return name != null ? m_targetRoot.resolve(name) : m_targetRoot;
+            return Paths.get(name != null ? name : "");
         }
 
         @Override
