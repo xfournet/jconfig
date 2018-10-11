@@ -20,7 +20,6 @@ import io.github.xfournet.jconfig.raw.RawFileHandler;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.*;
-import static java.nio.file.StandardOpenOption.TRUNCATE_EXISTING;
 import static java.util.Collections.*;
 
 public class JConfigImpl implements JConfig {
@@ -252,8 +251,8 @@ public class JConfigImpl implements JConfig {
             Files.createDirectories(outputFile.getParent());
 
             if ("base64".equals(encoding)) {
-                Base64.Decoder decoder = Base64.getDecoder();
-                try (OutputStream out = new BufferedOutputStream(Files.newOutputStream(outputFile, TRUNCATE_EXISTING))) {
+                Base64.Decoder decoder = Base64.getMimeDecoder();
+                try (OutputStream out = new BufferedOutputStream(Files.newOutputStream(outputFile))) {
                     for (String line : lines) {
                         out.write(decoder.decode(line));
                     }
