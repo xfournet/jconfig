@@ -8,6 +8,7 @@
 -DpropertyY=456
 
 # Display JVM values
+-XX:+Test
 -XX:+PrintFlagsFinal
 
 # Set Heap size

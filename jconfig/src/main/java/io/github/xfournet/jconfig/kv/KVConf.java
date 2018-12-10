@@ -2,11 +2,10 @@ package io.github.xfournet.jconfig.kv;
 
 import java.io.*;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.function.*;
 import java.util.stream.*;
+import javax.annotation.*;
 
 class KVConf<K> {
     private static final String COMMENT_MARK = "#";
@@ -14,15 +13,16 @@ class KVConf<K> {
     private final List<KVEntry<K>> m_entries;
     private final Map<K, KVEntry<K>> m_entriesByKey;
 
-    static <K> KVConf<K> readConf(Path file, Charset charset, Function<String, KVEntry<K>> entryParser) {
+    static <K> KVConf<K> readConf(@Nullable InputStream input, Charset charset, Function<String, KVEntry<K>> entryParser) throws IOException {
         List<KVEntry<K>> entries = new ArrayList<>();
         Map<K, KVEntry<K>> entriesByKey = new HashMap<>();
-        if (Files.exists(file)) {
 
-            try (Stream<String> lines = Files.lines(file, charset)) {
-                List<String> comments = new ArrayList<>();
+        List<String> comments = new ArrayList<>();
 
-                lines.forEach(line -> {
+        if (input != null) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(input, charset))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
                     line = line.trim();
                     if (line.isEmpty() || line.startsWith(COMMENT_MARK)) {
                         comments.add(line);
@@ -45,9 +45,7 @@ class KVConf<K> {
                         // comments has been associated to this entry, clear them for next round
                         comments.clear();
                     }
-                });
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
+                }
             }
         }
 
@@ -59,22 +57,25 @@ class KVConf<K> {
         m_entriesByKey = entriesByKey;
     }
 
-    void merge(KVConf<K> source) {
+    void mergeWith(KVConf<K> source) {
         source.m_entries.forEach(this::setEntry);
     }
 
-    void write(Path destination, Charset charset, Function<KVEntry<K>, String> entryFormatter) {
-        List<String> lines = new ArrayList<>();
-        for (KVEntry<K> entry : m_entries) {
-            lines.addAll(entry.getComments());
-            lines.add(entryFormatter.apply(entry));
-        }
-
-        try {
-            Files.createDirectories(destination.getParent());
-            Files.write(destination, lines, charset);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
+    void write(OutputStream output, Charset charset, Function<KVEntry<K>, String> entryFormatter) throws IOException {
+        boolean firstLine = true;
+        try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(output, charset))) {
+            for (KVEntry<K> entry : m_entries) {
+                for (String comment : entry.getComments()) {
+                    if (!(firstLine && comment.isEmpty())) {
+                        writer.write(comment);
+                        writer.newLine();
+                        firstLine = false;
+                    }
+                }
+                writer.write(entryFormatter.apply(entry));
+                writer.newLine();
+                firstLine = false;
+            }
         }
     }
 
@@ -162,6 +163,7 @@ class KVConf<K> {
                       refConf.m_entriesByKey.keySet().stream() //
                               .filter(k -> !m_entriesByKey.containsKey(k)) //
                               .map(k -> "-remove " + keyFormatter.apply(k)) //
+                              .sorted() //
                               .collect(Collectors.toList()));
 
         // generate set instructions

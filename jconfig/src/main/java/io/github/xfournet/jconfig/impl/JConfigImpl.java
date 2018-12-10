@@ -6,42 +6,52 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.atomic.*;
 import java.util.function.*;
 import java.util.regex.*;
 import java.util.stream.*;
+import java.util.zip.*;
 import javax.annotation.*;
-import io.github.xfournet.jconfig.FileHandler;
+import io.github.xfournet.jconfig.Diff;
+import io.github.xfournet.jconfig.FileContentHandler;
+import io.github.xfournet.jconfig.FileEntry;
 import io.github.xfournet.jconfig.JConfig;
-import io.github.xfournet.jconfig.Section;
-import io.github.xfournet.jconfig.jvm.JvmConfHandler;
-import io.github.xfournet.jconfig.properties.PropertiesHandler;
-import io.github.xfournet.jconfig.raw.RawFileHandler;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.nio.file.StandardCopyOption.*;
-import static java.util.Collections.*;
 
 public class JConfigImpl implements JConfig {
-    private static final Charset INI_CHARSET = UTF_8;
+    private static final Charset DIFF_CHARSET = UTF_8;
     private static final Pattern SECTION_MARKER = Pattern.compile("^\\[(.+)]( +#.*)?$");
 
-    private final List<FileHandler> m_fileHandlers = Arrays.asList(new JvmConfHandler(), new PropertiesHandler(), new RawFileHandler());
+    private final Path m_targetDir;
+    private Predicate<Path> m_diffPathFilter;
+    private final Function<Path, FileContentHandler> m_fileHandlerResolver;
+
+    public JConfigImpl(Path targetDir, Predicate<Path> diffPathFilter, Function<Path, FileContentHandler> fileHandlerResolver) {
+        m_targetDir = targetDir;
+        m_diffPathFilter = diffPathFilter;
+        m_fileHandlerResolver = fileHandlerResolver;
+    }
 
     @Override
-    public void apply(Path targetDir, Path iniFile) {
+    public Path targetDir() {
+        return m_targetDir;
+    }
+
+    @Override
+    public void apply(Path diffFile) {
         try (Transaction tx = new Transaction()) {
-            List<Section> sections = parseSections(iniFile);
-            sections.forEach(section -> processSection(tx, section, targetDir));
+            List<Section> sections = parseSections(diffFile);
+            sections.forEach(section -> processSection(tx, section));
 
             tx.commit();
         }
     }
 
     @Override
-    public void diff(Path directory, Path referenceDir, Predicate<String> pathFilter, Path diffFile) {
+    public void diff(Path referenceDir, Path diffFile) {
         try (Transaction tx = new Transaction()) {
-            List<Section> sections = generateSections(directory, referenceDir, pathFilter);
+            List<Section> sections = generateSections(referenceDir);
             writeSections(sections, tx.getOutputFile(diffFile));
 
             tx.commit();
@@ -49,151 +59,145 @@ public class JConfigImpl implements JConfig {
     }
 
     @Override
-    public void mergeFiles(Path source1, Path source2, Path destination) {
+    public void merge(Path source) {
+        if (Files.isDirectory(source)) {
+            merge(walkDirectory(source).stream().map(path -> new PathFileEntry(source.resolve(path), path)));
+        } else {
+            try (ZipFile zipFile = new ZipFile(source.toFile())) {
+                Stream<? extends FileEntry> contentStream = zipFile.stream().
+                        filter(e -> !e.isDirectory()).
+                        map(e -> new ZipFileEntry(zipFile, e)).
+                        filter(c -> m_diffPathFilter.test(c.path()));
+
+                merge(contentStream);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }
+    }
+
+    @Override
+    public void merge(Stream<? extends FileEntry> sourceFileEntries) {
         try (Transaction tx = new Transaction()) {
-            retrieveFileHandler(source1).mergeFiles(source1, source2, tx.getOutputFile(destination));
+            sourceFileEntries.forEach(fileEntry -> {
+                Path destinationFile = m_targetDir.resolve(fileEntry.path());
+                Path outputFile = tx.getOutputFile(destinationFile);
+                if (Files.exists(destinationFile)) {
+                    try (InputStream source1Input = fileEntry.open(); InputStream source2Input = Files.newInputStream(destinationFile);
+                         OutputStream resultOutput = Files.newOutputStream(outputFile)) {
+                        retrieveFileHandler(fileEntry.path()).merge(source1Input, source2Input, resultOutput);
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                } else {
+                    try (InputStream source1Input = fileEntry.open()) {
+                        Files.copy(source1Input, outputFile);
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                }
+            });
+            tx.commit();
+        }
+    }
+
+    @Override
+    public void merge(Path destinationFile, Path sourceFile) {
+        FileContentHandler fileContentHandler = retrieveFileHandler(destinationFile);
+        Path resolvedDestinationFile = m_targetDir.resolve(destinationFile);
+
+        try (Transaction tx = new Transaction()) {
+            Path outputFile = tx.getOutputFile(resolvedDestinationFile);
+            try (InputStream source1Input = Files.newInputStream(sourceFile); InputStream source2Input = Files.newInputStream(resolvedDestinationFile);
+                 OutputStream resultOutput = Files.newOutputStream(outputFile)) {
+                fileContentHandler.merge(source1Input, source2Input, resultOutput);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
             tx.commit();
         }
     }
 
     @Override
     public void setEntries(Path file, List<String> entries) {
-        FileHandler fileHandler = retrieveFileHandler(file);
+        FileContentHandler fileContentHandler = retrieveFileHandler(file);
+        Path resolvedFile = m_targetDir.resolve(file);
+
         try (Transaction tx = new Transaction()) {
-            fileHandler.setEntries(file, tx.getOutputFile(file), entries);
+            Path outputFile = tx.getOutputFile(resolvedFile);
+            try (InputStream sourceInput = Files.newInputStream(resolvedFile); OutputStream resultOutput = Files.newOutputStream(outputFile)) {
+                fileContentHandler.setEntries(sourceInput, resultOutput, entries);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
             tx.commit();
         }
     }
 
     @Override
     public void removeEntries(Path file, List<String> entries) {
-        FileHandler fileHandler = retrieveFileHandler(file);
+        FileContentHandler fileContentHandler = retrieveFileHandler(file);
+        Path resolvedFile = m_targetDir.resolve(file);
+
         try (Transaction tx = new Transaction()) {
-            fileHandler.removeEntries(file, tx.getOutputFile(file), entries);
+            Path outputFile = tx.getOutputFile(resolvedFile);
+            try (InputStream sourceInput = Files.newInputStream(resolvedFile); OutputStream resultOutput = Files.newOutputStream(outputFile)) {
+                fileContentHandler.removeEntries(sourceInput, resultOutput, entries);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
             tx.commit();
         }
     }
 
-    @Override
-    public void normalize(Path file) {
-        FileHandler fileHandler = retrieveFileHandler(file);
-        try (Transaction tx = new Transaction()) {
-            fileHandler.normalize(file, tx.getOutputFile(file));
-            tx.commit();
+    private FileContentHandler retrieveFileHandler(Path path) {
+        return Optional.of(path).
+                map(m_fileHandlerResolver).
+                orElseThrow(() -> new IllegalArgumentException("No handler was found for file: " + path));
+    }
+
+    //region apply related code
+    private List<Section> parseSections(Path diffFile) {
+        List<Section> sections = new ArrayList<>();
+
+        List<String> lines;
+        try {
+            lines = Files.readAllLines(diffFile, DIFF_CHARSET);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
+
+        String currentSection = null;
+        List<String> sectionLines = new ArrayList<>();
+        for (String line : lines) {
+            Matcher matcher = SECTION_MARKER.matcher(line);
+            if (matcher.matches()) {
+                if (currentSection != null) {
+                    sections.add(buildSection(currentSection, sectionLines));
+                }
+                currentSection = matcher.group(1);
+                sectionLines = new ArrayList<>();
+            } else {
+                if (currentSection != null) {
+                    sectionLines.add(line);
+                } else {
+                    if (isContentLine(line)) {
+                        throw new IllegalStateException("Content outside section in " + diffFile);
+                    }
+                }
+            }
+        }
+
+        if (currentSection != null) {
+            sections.add(buildSection(currentSection, sectionLines));
+        }
+
+        return sections;
     }
 
     private static boolean isContentLine(String line) {
         // traditional .ini file comment mark is ';' , add support of traditional '#' also
         return !line.isEmpty() && !(line.startsWith("#") || line.startsWith(";"));
-    }
-
-    private List<Section> generateSections(Path directory, Path referenceDir, Predicate<String> pathFilter) {
-        List<Section> sections = new ArrayList<>();
-
-        Set<String> dirPaths = walkDirectory(directory, pathFilter);
-        Set<String> refPaths = walkDirectory(referenceDir, pathFilter);
-
-        Set<String> allPaths = new TreeSet<>();
-        allPaths.addAll(dirPaths);
-        allPaths.addAll(refPaths);
-
-        allPaths.forEach(path -> {
-            if (dirPaths.contains(path)) {
-                Path currentFile = directory.resolve(path);
-                Path referenceFile = refPaths.contains(path) ? referenceDir.resolve(path) : null;
-                FileHandler fileHandler = retrieveFileHandler(currentFile);
-                Section diff = fileHandler.diff(currentFile, path, referenceFile);
-                if (diff != null) {
-                    sections.add(diff);
-                }
-            } else {
-                // file deleted
-                sections.add(new Section(path, Section.Mode.DELETE, null, emptyList()));
-            }
-        });
-
-        return sections;
-    }
-
-    private Set<String> walkDirectory(Path dir, Predicate<String> pathFilter) {
-        int pathIndex = dir.toString().length() + 1;
-        try (Stream<Path> walk = Files.walk(dir)) {
-            return walk //
-                    .filter(p -> Files.isRegularFile(p)) //
-                    .map(p -> p.toString().substring(pathIndex).replace("\\", "/")) //
-                    .filter(pathFilter) //
-                    .collect(Collectors.toSet());
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    private void writeSections(List<Section> sections, Path outputFile) {
-        try (PrintWriter pw = new PrintWriter(Files.newBufferedWriter(outputFile, INI_CHARSET))) {
-            sections.forEach(section -> {
-                String mode = "";
-                switch (section.getMode()) {
-                    case APPLY:
-                        mode = " apply";
-                        break;
-                    case DELETE:
-                        mode = " delete";
-                        break;
-                }
-                String encoding = section.getEncoding();
-                if (encoding != null) {
-                    encoding = " @" + encoding.toLowerCase();
-                } else {
-                    encoding = "";
-                }
-
-                pw.printf("[%s%s%s]%n", section.getFilePath(), mode, encoding);
-                section.getLines().forEach(pw::println);
-                pw.println();
-            });
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-    }
-
-    private List<Section> parseSections(Path iniFile) {
-        List<Section> sections = new ArrayList<>();
-
-        try (Stream<String> lines = Files.lines(iniFile, INI_CHARSET)) {
-            AtomicReference<String> currentSectionRef = new AtomicReference<>();
-            List<String> sectionLines = new ArrayList<>();
-
-            lines.map(String::trim).forEach(line -> {
-                final String currentSection = currentSectionRef.get();
-
-                Matcher matcher = SECTION_MARKER.matcher(line);
-                if (matcher.matches()) {
-                    if (currentSection != null) {
-                        sections.add(buildSection(currentSection, sectionLines));
-                    }
-                    currentSectionRef.set(matcher.group(1));
-                    sectionLines.clear();
-                } else {
-                    if (currentSection != null) {
-                        sectionLines.add(line);
-                    } else {
-                        if (isContentLine(line)) {
-                            throw new IllegalStateException("Content outside INI section in " + iniFile);
-                        }
-                    }
-                }
-            });
-
-            String currentSection = currentSectionRef.get();
-            if (currentSection != null) {
-                sections.add(buildSection(currentSection, sectionLines));
-            }
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-
-        return sections;
     }
 
     private Section buildSection(String currentSection, List<String> sectionLines) {
@@ -204,92 +208,142 @@ public class JConfigImpl implements JConfig {
 
         String[] elements = currentSection.split(" +");
         if (elements.length < 1 || elements.length > 2) {
-            throw new IllegalArgumentException("Invalid INI section header : " + currentSection);
+            throw new IllegalArgumentException("Invalid section header : " + currentSection);
         }
 
         String fileName = elements[0];
-        Section.Mode mode = Section.Mode.OVERWRITE;
+        String mode = null;
         String encoding = null;
-        if (elements.length > 1) {
+        if (elements.length == 2) {
             String element = elements[1];
-            if ("apply".equalsIgnoreCase(element)) {
-                mode = Section.Mode.APPLY;
-            } else if ("delete".equalsIgnoreCase(element)) {
-                mode = Section.Mode.DELETE;
-            } else if (element.startsWith("@")) {
+            if (element.startsWith("@")) {
                 encoding = element.substring(1);
-            }
-        }
-
-        return new Section(fileName, mode, encoding, new ArrayList<>(sectionLines));
-    }
-
-    private void processSection(Transaction tx, Section section, Path target) {
-
-        Path file = target.resolve(section.getFilePath());
-        switch (section.getMode()) {
-            case DELETE:
-                handleDelete(tx, file, section.getLines());
-                break;
-            case APPLY:
-                handleApply(tx, file, section.getLines());
-                break;
-            case OVERWRITE:
-                handleOverride(tx, file, section.getLines(), section.getEncoding());
-                break;
-        }
-    }
-
-    private void handleDelete(Transaction tx, Path file, List<String> lines) {
-        if (lines.stream().anyMatch(JConfigImpl::isContentLine)) {
-            throw new IllegalStateException("Delete section contains content");
-        }
-
-        tx.deleteFile(file);
-    }
-
-    private void handleOverride(Transaction tx, Path file, List<String> lines, @Nullable String encoding) {
-        Path outputFile = tx.getOutputFile(file);
-        try {
-            Files.createDirectories(outputFile.getParent());
-
-            if ("base64".equals(encoding)) {
-                Base64.Decoder decoder = Base64.getMimeDecoder();
-                try (OutputStream out = new BufferedOutputStream(Files.newOutputStream(outputFile))) {
-                    for (String line : lines) {
-                        out.write(decoder.decode(line));
-                    }
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
-                }
             } else {
-                Charset charset;
-                if (encoding != null) {
-                    charset = Charset.forName(encoding);
-                } else {
-                    charset = retrieveFileHandler(file).getCharset();
-                }
-                Files.write(outputFile, lines, charset);
+                mode = element;
             }
+        }
+
+        Diff diff;
+        if (mode == null) {
+            diff = new Diff(true, encoding, sectionLines);
+        } else if ("apply".equalsIgnoreCase(mode)) {
+            diff = new Diff(false, null, sectionLines);
+        } else if ("delete".equalsIgnoreCase(mode)) {
+            if (sectionLines.stream().anyMatch(JConfigImpl::isContentLine)) {
+                throw new IllegalStateException("Delete section contains content");
+            }
+
+            diff = null;
+        } else {
+            throw new IllegalArgumentException("Invalid section header : " + currentSection);
+        }
+
+        return new Section(fileName, diff);
+    }
+
+    private void processSection(Transaction tx, Section section) {
+        Diff diff = section.getDiff();
+        Path targetPath = Paths.get(section.getPath());
+        Path targetFile = m_targetDir.resolve(targetPath);
+        if (diff != null) {
+            FileContentHandler fileContentHandler = retrieveFileHandler(targetPath);
+
+            Path outputFile = tx.getOutputFile(targetFile);
+            try (InputStream sourceInput = Files.exists(targetFile) ? Files.newInputStream(targetFile) : null;
+                 OutputStream resultOutput = Files.newOutputStream(outputFile)) {
+                fileContentHandler.apply(sourceInput, resultOutput, diff);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        } else {
+            tx.deleteFile(targetFile);
+        }
+    }
+    //endregion
+
+    //region diff related code
+    private List<Section> generateSections(Path referenceDir) {
+        Set<Path> dirPaths = walkDirectory(m_targetDir);
+        Set<Path> refPaths = walkDirectory(referenceDir);
+
+        Set<Path> allPaths = new TreeSet<>();
+        allPaths.addAll(dirPaths);
+        allPaths.addAll(refPaths);
+
+        return allPaths.stream().
+                map(path -> {
+                    Diff diff;
+                    if (dirPaths.contains(path)) {
+                        Path currentFile = m_targetDir.resolve(path);
+                        Path referenceFile = refPaths.contains(path) ? referenceDir.resolve(path) : null;
+                        FileContentHandler fileContentHandler = retrieveFileHandler(path);
+                        try (InputStream source = Files.newInputStream(currentFile);
+                             InputStream referenceSource = referenceFile != null ? Files.newInputStream(referenceFile) : null) {
+                            diff = fileContentHandler.diff(source, referenceSource);
+                            if (diff == null) {
+                                return null; // no diff, will be filtered in the stream filter below
+                            }
+                        } catch (IOException e) {
+                            throw new UncheckedIOException(e);
+                        }
+                    } else {
+                        // file deleted
+                        diff = null;
+                    }
+                    String filePath = path.toString().replace("\\", "/");
+                    return new Section(filePath, diff);
+                }).
+                filter(Objects::nonNull).
+                collect(Collectors.toList());
+    }
+
+    private Set<Path> walkDirectory(Path dir) {
+        try (Stream<Path> walk = Files.walk(dir)) {
+            return walk.
+                    filter(p -> Files.isRegularFile(p)).
+                    map(dir::relativize).
+                    filter(m_diffPathFilter).
+                    collect(Collectors.toSet());
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
-    private void handleApply(Transaction tx, Path file, List<String> lines) {
-        FileHandler fileHandler = retrieveFileHandler(file);
-        fileHandler.apply(file, lines, tx.getOutputFile(file));
-    }
+    private void writeSections(List<Section> sections, Path outputFile) {
+        try (PrintWriter pw = new PrintWriter(Files.newBufferedWriter(outputFile, DIFF_CHARSET))) {
+            sections.forEach(section -> {
+                Diff diff = section.getDiff();
 
-    private FileHandler retrieveFileHandler(Path file) {
-        for (FileHandler fileHandler : m_fileHandlers) {
-            if (fileHandler.canHandle(file)) {
-                return fileHandler;
-            }
+                String mode;
+                String encoding;
+                if (diff != null) {
+                    if (diff.isOverwrite()) {
+                        mode = "";
+                    } else {
+                        mode = " apply";
+                    }
+                    encoding = diff.getEncoding();
+                    if (encoding == null) {
+                        encoding = "";
+                    } else {
+                        encoding = " @" + encoding.toLowerCase();
+                    }
+                } else {
+                    mode = " delete";
+                    encoding = "";
+                }
+
+                pw.printf("[%s%s%s]%n", section.getPath(), mode, encoding);
+                if (diff != null) {
+                    diff.getLines().forEach(pw::println);
+                }
+                pw.println();
+            });
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
-
-        throw new IllegalArgumentException("No handler was found for file: " + file);
     }
+    //endregion
 
     private static class Transaction implements AutoCloseable {
         private final long m_id = System.currentTimeMillis();
@@ -350,6 +404,71 @@ public class JConfigImpl implements JConfig {
                     throw new UncheckedIOException(e);
                 }
             }
+        }
+    }
+
+    private static class Section {
+        private final String m_path;
+        @Nullable
+        private final Diff m_diff;
+
+        Section(String path, @Nullable Diff diff) {
+            m_path = path;
+            m_diff = diff;
+        }
+
+        String getPath() {
+            return m_path;
+        }
+
+        /**
+         * @return {@code null} if the file has to be deleted else the {@link Diff} object
+         */
+        @Nullable
+        Diff getDiff() {
+            return m_diff;
+        }
+    }
+
+    private static class PathFileEntry implements FileEntry {
+        private final Path m_realPath;
+        private final Path m_relativePath;
+
+        PathFileEntry(Path realPath, Path relativePath) {
+            m_realPath = realPath;
+            m_relativePath = relativePath;
+        }
+
+        @Override
+        public Path path() {
+            return m_relativePath;
+        }
+
+        @Override
+        public InputStream open() throws IOException {
+            return Files.newInputStream(m_realPath);
+        }
+    }
+
+    private static class ZipFileEntry implements FileEntry {
+        private final Path m_path;
+        private final ZipFile m_zipFile;
+        private final ZipEntry m_zipEntry;
+
+        ZipFileEntry(ZipFile zipFile, ZipEntry zipEntry) {
+            m_path = Paths.get(zipEntry.getName());
+            m_zipFile = zipFile;
+            m_zipEntry = zipEntry;
+        }
+
+        @Override
+        public Path path() {
+            return m_path;
+        }
+
+        @Override
+        public InputStream open() throws IOException {
+            return m_zipFile.getInputStream(m_zipEntry);
         }
     }
 }

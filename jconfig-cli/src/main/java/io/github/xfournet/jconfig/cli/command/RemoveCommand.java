@@ -1,18 +1,14 @@
 package io.github.xfournet.jconfig.cli.command;
 
+import java.nio.file.Paths;
 import java.util.*;
-import javax.annotation.*;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.Parameters;
 import io.github.xfournet.jconfig.cli.Command;
-import io.github.xfournet.jconfig.cli.CommandExecutor;
+import io.github.xfournet.jconfig.cli.CommandContext;
 
 @Parameters(commandNames = "remove", commandDescription = "Remove one or many entries in a configuration file")
 public class RemoveCommand implements Command {
-
-    @Parameter(names = {"--dir", "-d"}, description = "Directory to be updated, default is current directory")
-    @Nullable
-    private String m_dir;
 
     @Parameter(names = {"--file", "-f"}, description = "Configuration file to be updated", required = true)
     private String m_file;
@@ -21,7 +17,7 @@ public class RemoveCommand implements Command {
     private List<String> m_entries = new ArrayList<>();
 
     @Override
-    public void execute(CommandExecutor ctx) {
-        ctx.remove(m_dir, m_file, m_entries);
+    public void execute(CommandContext ctx) {
+        ctx.getJConfig().removeEntries(Paths.get(m_file), m_entries);
     }
 }

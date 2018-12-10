@@ -1,16 +1,12 @@
--server
-
 -DpropertyA
 -DpropertyB
 -DpropertyX=1234
--DpropertyY=978
+-DpropertyY
 
 # Display JVM values
--XX:+Test
 -XX:-PrintFlagsFinal
-
 # Set Heap size
--Xmx512M
--DpropertyC
+-Xmx987M
+
+-DpropertyC=5
 -DpropertyZ=45
--remove

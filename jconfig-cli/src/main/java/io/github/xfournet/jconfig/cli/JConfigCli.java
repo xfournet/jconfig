@@ -4,7 +4,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.*;
-import javax.annotation.*;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.ParameterException;
 import com.beust.jcommander.Parameters;
@@ -13,34 +12,39 @@ import io.github.xfournet.jconfig.cli.command.ApplyCommand;
 import io.github.xfournet.jconfig.cli.command.DiffCommand;
 import io.github.xfournet.jconfig.cli.command.HelpCommand;
 import io.github.xfournet.jconfig.cli.command.MergeCommand;
-import io.github.xfournet.jconfig.cli.command.NormalizeCommand;
 import io.github.xfournet.jconfig.cli.command.RemoveCommand;
 import io.github.xfournet.jconfig.cli.command.SetCommand;
 
 public class JConfigCli {
 
     public static void main(String[] args) {
-        if (!new JConfigCli("jconfig").run(args)) {
+        if (!new JConfigCli("jconfig", defaultCommands(), Paths.get(""), path -> true).run(args)) {
             System.exit(1);
         }
     }
 
-    private final String m_programName;
-    private final Predicate<String> m_diffPathFilter;
-
-    public JConfigCli(String programName) {
-        this(programName, s -> true);
+    @SuppressWarnings("WeakerAccess")
+    public static List<Command> defaultCommands() {
+        return Arrays.asList(new ApplyCommand(), new DiffCommand(), new MergeCommand(), new RemoveCommand(), new SetCommand());
     }
 
-    public JConfigCli(String programName, Predicate<String> diffPathFilter) {
+    private final String m_programName;
+    private final List<Command> m_commands;
+    private final Path m_targetDir;
+    private final Predicate<Path> m_diffPathFilter;
+
+    public JConfigCli(String programName, List<Command> commands, Path targetDir, Predicate<Path> diffPathFilter) {
         m_programName = programName;
+        m_commands = commands;
+        m_targetDir = targetDir;
         m_diffPathFilter = diffPathFilter;
     }
 
+    @SuppressWarnings("WeakerAccess")
     public boolean run(String[] args) {
         Map<String, Command> commandTable = new LinkedHashMap<>();
 
-        for (Command command : getCommands()) {
+        for (Command command : m_commands) {
             addCommand(commandTable, command);
         }
 
@@ -78,17 +82,13 @@ public class JConfigCli {
         }
 
         try {
-            command.execute(new CommandExecutorImpl(jc));
+            command.execute(new CommandContextImpl(jc, JConfig.newDefaultJConfig(m_targetDir, m_diffPathFilter)));
         } catch (JConfigException e) {
             System.err.printf(m_programName + ": %s%n", e.getMessage());
             return false;
         }
 
         return error == null;
-    }
-
-    protected List<Command> getCommands() {
-        return Arrays.asList(new ApplyCommand(), new DiffCommand(), new MergeCommand(), new RemoveCommand(), new SetCommand(), new NormalizeCommand());
     }
 
     private void addCommand(Map<String, Command> commandTable, Command command) {
@@ -106,57 +106,23 @@ public class JConfigCli {
         }
     }
 
-    private final class CommandExecutorImpl implements CommandExecutor {
-        private final JConfig m_jConfig = JConfig.newJConfig();
-        private final JCommander m_jc;
+    private final class CommandContextImpl implements CommandContext {
+        private final JCommander m_jCommander;
+        private final JConfig m_jConfig;
 
-        CommandExecutorImpl(JCommander jc) {
-            m_jc = jc;
-        }
-
-        private Path resolveTargetDir(@Nullable String name) {
-            return Paths.get(name != null ? name : "");
+        CommandContextImpl(JCommander jCommander, JConfig jConfig) {
+            m_jCommander = jCommander;
+            m_jConfig = jConfig;
         }
 
         @Override
-        public void apply(@Nullable String dir, String confFile) {
-            Path targetDir = resolveTargetDir(dir);
-            m_jConfig.apply(targetDir, Paths.get(confFile));
+        public JCommander getJCommander() {
+            return m_jCommander;
         }
 
         @Override
-        public void diff(@Nullable String dir, String referenceDir, String confFile) {
-            Path targetFile = resolveTargetDir(dir);
-            m_jConfig.diff(targetFile, Paths.get(referenceDir), m_diffPathFilter, Paths.get(confFile));
-        }
-
-        @Override
-        public void merge(@Nullable String dir, String file, String sourceFile) {
-            Path targetFile = resolveTargetDir(dir).resolve(file);
-            m_jConfig.mergeFiles(targetFile, Paths.get(file), targetFile);
-        }
-
-        @Override
-        public void remove(@Nullable String dir, String file, List<String> entries) {
-            Path targetFile = resolveTargetDir(dir).resolve(file);
-            m_jConfig.removeEntries(targetFile, entries);
-        }
-
-        @Override
-        public void set(@Nullable String dir, String file, List<String> entries) {
-            Path targetFile = resolveTargetDir(dir).resolve(file);
-            m_jConfig.setEntries(targetFile, entries);
-        }
-
-        @Override
-        public void normalize(@Nullable String dir, String file) {
-            Path targetFile = resolveTargetDir(dir).resolve(file);
-            m_jConfig.normalize(targetFile);
-        }
-
-        @Override
-        public void printHelp() {
-            m_jc.usage();
+        public JConfig getJConfig() {
+            return m_jConfig;
         }
     }
 }

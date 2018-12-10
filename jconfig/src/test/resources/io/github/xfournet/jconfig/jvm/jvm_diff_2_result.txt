@@ -1,0 +1,11 @@
+-remove -DpropertyA=
+-remove -DpropertyB=
+-remove -DpropertyX=
+-remove -XX:Test
+-remove -Xmx
+-remove -server
+-DpropertyC
+-DpropertyY=978
+-DpropertyZ=45
+-XX:-PrintFlagsFinal
+-set -remove

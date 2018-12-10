@@ -1,0 +1,7 @@
+-DpropertyC=5
+-DpropertyY
+-DpropertyZ=45
+-XX:-PrintFlagsFinal
+-remove
+# Set Heap size
+-Xmx987M

@@ -1,20 +1,14 @@
 package io.github.xfournet.jconfig.jvm;
 
 import java.nio.charset.Charset;
-import java.nio.file.Path;
 import java.util.regex.*;
-import io.github.xfournet.jconfig.kv.KVConfHandler;
+import io.github.xfournet.jconfig.kv.KVConfContentHandler;
 import io.github.xfournet.jconfig.kv.KVEntry;
 
-public final class JvmConfHandler extends KVConfHandler<JvmConfEntryKey> {
+public final class JvmConfContentHandler extends KVConfContentHandler<JvmConfEntryKey> {
 
-    public JvmConfHandler() {
-        super(Charset.defaultCharset(), JvmConfHandler::parse, JvmConfHandler::format, JvmConfHandler::formatKey);
-    }
-
-    @Override
-    public boolean canHandle(Path file) {
-        return file.getFileName().toString().equals("jvm.conf");
+    public JvmConfContentHandler() {
+        super(Charset.defaultCharset(), JvmConfContentHandler::parse, JvmConfContentHandler::format, JvmConfContentHandler::formatKey);
     }
 
     private static KVEntry<JvmConfEntryKey> parse(String line) {

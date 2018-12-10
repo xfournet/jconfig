@@ -1,0 +1,11 @@
+# Set Heap size
+-Xmx987M
+
+-remove -server
+
+-set -DpropertyC=5
+-DpropertyY
+-DpropertyZ=45
+-XX:-PrintFlagsFinal
+
+-remove -XX:+Test

@@ -2,3 +2,4 @@
 -DpropertyY=978
 -DpropertyZ=45
 -XX:-PrintFlagsFinal
+-remove
