@@ -29,7 +29,7 @@ git fetch $GIT_REMOTE_NAME
 echo "Checkout $GIT_REMOTE_NAME/master"
 git checkout $GIT_REMOTE_NAME/master
 
-ARTIFACT_ID="$(sed -n -E "s/.*<artifactId>(.*)<\/artifactId>.*/\1/p" pom.xml | head -1)"
+ARTIFACT_ID="$(sed -n -E "s/.*<artifactId>(.*)<\/artifactId>.*/\1/p" pom.xml | head -1 | sed "s/-parent//")"
 echo "Artifact id is    : $ARTIFACT_ID"
 
 CURRENT_VERSION="$(sed -n -E "s/.*<revision>(.*)<\/revision>.*/\1/p" pom.xml)"
