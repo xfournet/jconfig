@@ -81,7 +81,7 @@ git commit -m "Start next development cycle on version $NEXT_VERSION" pom.xml
 echo
 
 echo "Pushing to Git repository"
-git push --follow-tags upstream HEAD:master
+git push --follow-tags $GIT_REMOTE_NAME HEAD:master
 
 echo "Going back to local branch $GIT_LOCAL_BRANCH"
 git checkout $GIT_LOCAL_BRANCH
