@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.*;
+import java.util.zip.*;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 import io.github.xfournet.jconfig.JConfig;
@@ -125,10 +126,21 @@ public class JConfigImplTest {
         Util.ensureCleanDirectory(root);
 
         Path mergeDir = root.resolve("merge");
-        for (String mergeName : mergeNames) {
-            deploy(mergeDir, scenario + "/merge", mergeName);
+        Path mergeFile = root.resolve("merge.zip");
+
+        try (ZipOutputStream zipOutputStream = new ZipOutputStream(Files.newOutputStream(mergeFile))) {
+            for (String mergeName : mergeNames) {
+                Path file = deploy(mergeDir, scenario + "/merge", mergeName);
+                ZipEntry entry = new ZipEntry(mergeName);
+                zipOutputStream.putNextEntry(entry);
+
+                try (InputStream in = Files.newInputStream(file)) {
+                    copy(in, zipOutputStream);
+                }
+
+                zipOutputStream.closeEntry();
+            }
         }
-        Path mergeFile = deploy(root, scenario, "merge.zip");
 
         Path expectedDir = root.resolve("expected");
         for (String resultName : resultNames) {
@@ -187,11 +199,7 @@ public class JConfigImplTest {
 
                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
                 try (InputStream in = Files.newInputStream(expectedFile)) {
-                    byte[] buffer = new byte[4096];
-                    int read;
-                    while ((read = in.read(buffer)) != -1) {
-                        bos.write(buffer, 0, read);
-                    }
+                    copy(in, bos);
                 } catch (IOException e) {
                     throw new UncheckedIOException(e);
                 }
@@ -216,5 +224,13 @@ public class JConfigImplTest {
             Files.copy(in, output, REPLACE_EXISTING);
         }
         return output;
+    }
+
+    private void copy(InputStream in, OutputStream out) throws IOException {
+        byte[] buffer = new byte[4096];
+        int read;
+        while ((read = in.read(buffer)) != -1) {
+            out.write(buffer, 0, read);
+        }
     }
 }
