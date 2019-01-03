@@ -40,8 +40,16 @@ public class JConfigImpl implements JConfig {
 
     @Override
     public void apply(Path diffFile) {
+        List<String> diffFileLines;
+        try {
+            diffFileLines = Files.readAllLines(diffFile, DIFF_CHARSET);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+
+        List<Section> sections = parseSections(diffFileLines, diffFile);
+
         try (Transaction tx = new Transaction()) {
-            List<Section> sections = parseSections(diffFile);
             sections.forEach(section -> processSection(tx, section));
 
             tx.commit();
@@ -157,19 +165,12 @@ public class JConfigImpl implements JConfig {
     }
 
     //region apply related code
-    private List<Section> parseSections(Path diffFile) {
+    private List<Section> parseSections(List<String> diffFileContent, Path diffFile) {
         List<Section> sections = new ArrayList<>();
-
-        List<String> lines;
-        try {
-            lines = Files.readAllLines(diffFile, DIFF_CHARSET);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
 
         String currentSection = null;
         List<String> sectionLines = new ArrayList<>();
-        for (String line : lines) {
+        for (String line : diffFileContent) {
             Matcher matcher = SECTION_MARKER.matcher(line);
             if (matcher.matches()) {
                 if (currentSection != null) {
@@ -180,10 +181,8 @@ public class JConfigImpl implements JConfig {
             } else {
                 if (currentSection != null) {
                     sectionLines.add(line);
-                } else {
-                    if (isContentLine(line)) {
-                        throw new IllegalStateException("Content outside section in " + diffFile);
-                    }
+                } else if (isContentLine(line)) {
+                    throw new IllegalStateException("Content outside section in " + diffFile);
                 }
             }
         }
