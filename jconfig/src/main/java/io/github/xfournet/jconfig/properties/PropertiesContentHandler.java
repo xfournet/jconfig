@@ -15,8 +15,8 @@ public final class PropertiesContentHandler extends KVConfContentHandler<String>
     private static KVEntry<String> parse(String line) {
         String key = line;
         String value = "";
-        int posEqual = line.indexOf("=");
-        int posColon = line.indexOf(":");
+        int posEqual = line.indexOf('=');
+        int posColon = line.indexOf(':');
         int pos = posEqual != -1 ? (posColon != -1 ? Math.min(posColon, posEqual) : posEqual) : posColon;
         if (pos != -1) {
             key = line.substring(0, pos).trim();

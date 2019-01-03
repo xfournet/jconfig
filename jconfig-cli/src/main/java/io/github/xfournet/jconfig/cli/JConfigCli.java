@@ -84,7 +84,7 @@ public class JConfigCli {
         try {
             command.execute(new CommandContextImpl(jc, JConfig.newDefaultJConfig(m_targetDir, m_diffPathFilter)));
         } catch (JConfigException e) {
-            System.err.printf(m_programName + ": %s%n", e.getMessage());
+            System.err.printf("%s: %s%n", m_programName, e.getMessage());
             return false;
         }
 

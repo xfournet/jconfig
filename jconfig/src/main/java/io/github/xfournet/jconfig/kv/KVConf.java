@@ -121,7 +121,7 @@ class KVConf<K> {
                 comments.add(instruction);
             } else {
 
-                int index = instruction.indexOf(" ");
+                int index = instruction.indexOf(' ');
                 if (index == -1) {
                     index = instruction.length();
                 }

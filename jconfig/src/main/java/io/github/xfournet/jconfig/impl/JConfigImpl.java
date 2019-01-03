@@ -300,7 +300,7 @@ public class JConfigImpl implements JConfig {
     private Set<Path> walkDirectory(Path dir) {
         try (Stream<Path> walk = Files.walk(dir)) {
             return walk.
-                    filter(p -> Files.isRegularFile(p)).
+                    filter(Files::isRegularFile).
                     map(dir::relativize).
                     filter(m_diffPathFilter).
                     collect(Collectors.toSet());
