@@ -35,7 +35,7 @@ public interface JConfig {
     }
 
     /**
-     * Create a {@link JConfig} with the default{@link FileContentHandler} resolver function ({@see #getDefaultFileHandlerResolver})
+     * Create a {@link JConfig} with the default{@link FileContentHandler} resolver function ({@link JConfigDefaults#getDefaultFileHandlerResolver()})
      *
      * @param destinationDir the destination directory for commands
      * @param diffPathFilter the {@link Path} filter to be used when doing diff
@@ -46,7 +46,7 @@ public interface JConfig {
     }
 
     /**
-     * Create a {@link JConfig} with the default{@link FileContentHandler} resolver function ({@see #getDefaultFileHandlerResolver})
+     * Create a {@link JConfig} with the default{@link FileContentHandler} resolver function ({@link JConfigDefaults#getDefaultFileHandlerResolver()})
      *
      * @param destinationDir the destination directory for commands
      * @return a new {@link JConfig} with default {@link FileContentHandler} resolver
