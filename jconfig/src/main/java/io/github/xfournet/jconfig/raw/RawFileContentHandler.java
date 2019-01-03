@@ -80,14 +80,8 @@ public class RawFileContentHandler implements FileContentHandler {
         for (byte aByte : content) {
             int b = aByte & 0xFF;
 
-            if (b == 0) {
+            if ((b < 32 || b > 127) && (b != '\n' && b != '\r' && b != '\f' && b != '\t' && b != '\b')) {
                 return false;
-            }
-
-            if (b < 32 || b > 127) {
-                if (b != '\n' && b != '\r' && b != '\f' && b != '\t' && b != '\b') {
-                    return false;
-                }
             }
         }
 

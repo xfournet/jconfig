@@ -17,7 +17,17 @@ public final class PropertiesContentHandler extends KVConfContentHandler<String>
         String value = "";
         int posEqual = line.indexOf('=');
         int posColon = line.indexOf(':');
-        int pos = posEqual != -1 ? (posColon != -1 ? Math.min(posColon, posEqual) : posEqual) : posColon;
+        int pos;
+        if (posEqual != -1 && posColon != -1) {
+            pos = Math.min(posColon, posEqual);
+        } else if (posEqual != -1) {
+            pos = posEqual;
+        } else if (posColon != -1) {
+            pos = posColon;
+        } else {
+            pos = -1;
+        }
+
         if (pos != -1) {
             key = line.substring(0, pos).trim();
             value = line.substring(pos + 1).trim();

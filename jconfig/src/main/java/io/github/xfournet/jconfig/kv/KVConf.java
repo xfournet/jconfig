@@ -120,38 +120,41 @@ class KVConf<K> {
             if (instruction.isEmpty() || instruction.startsWith(COMMENT_MARK)) {
                 comments.add(instruction);
             } else {
-
-                int index = instruction.indexOf(' ');
-                if (index == -1) {
-                    index = instruction.length();
-                }
-
-                String word = instruction.substring(0, index);
-
-                boolean set;
-                if ("-set".equals(word)) {
-                    set = true;
-                } else if ("-remove".equals(word)) {
-                    set = false;
-                } else {
-                    set = true;
-                    index = -1;
-                }
-
-                if (index < instruction.length()) {
-                    index++;
-                }
-
-                String entry = instruction.substring(index);
-                KVEntry<K> parsedEntry = entryParser.apply(entry);
-                parsedEntry.setComments(comments);
-                comments.clear();
-                if (set) {
-                    setEntry(parsedEntry);
-                } else {
-                    removeEntry(parsedEntry.getKey());
-                }
+                processInstruction(entryParser, instruction, comments);
+                comments = new ArrayList<>();
             }
+        }
+    }
+
+    private void processInstruction(Function<String, KVEntry<K>> entryParser, String instruction, List<String> comments) {
+        int index = instruction.indexOf(' ');
+        if (index == -1) {
+            index = instruction.length();
+        }
+
+        String word = instruction.substring(0, index);
+
+        boolean set;
+        if ("-set".equals(word)) {
+            set = true;
+        } else if ("-remove".equals(word)) {
+            set = false;
+        } else {
+            set = true;
+            index = -1;
+        }
+
+        if (index < instruction.length()) {
+            index++;
+        }
+
+        String entry = instruction.substring(index);
+        KVEntry<K> parsedEntry = entryParser.apply(entry);
+        parsedEntry.setComments(comments);
+        if (set) {
+            setEntry(parsedEntry);
+        } else {
+            removeEntry(parsedEntry.getKey());
         }
     }
 
