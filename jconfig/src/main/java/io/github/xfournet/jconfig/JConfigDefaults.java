@@ -9,6 +9,7 @@ import io.github.xfournet.jconfig.raw.RawFileContentHandler;
 /**
  * Contains default behaviors that can be used for {@link JConfig}.
  */
+@SuppressWarnings("WeakerAccess")
 public final class JConfigDefaults {
 
     /**
@@ -17,7 +18,7 @@ public final class JConfigDefaults {
     public static Function<Path, FileContentHandler> getDefaultFileHandlerResolver() {
         return path -> {
             String fileName = path.getFileName().toString();
-            if (fileName.equals("jvm.conf")) {
+            if ("jvm.conf".equals(fileName)) {
                 return new JvmConfContentHandler();
             } else if (fileName.endsWith(".properties")) {
                 return new PropertiesContentHandler();

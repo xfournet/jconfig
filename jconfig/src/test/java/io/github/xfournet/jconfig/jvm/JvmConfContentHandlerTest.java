@@ -167,7 +167,7 @@ public class JvmConfContentHandlerTest {
     @Test(expectedExceptions = IllegalArgumentException.class, expectedExceptionsMessageRegExp = "Unrecognized jvm.conf option: .*")
     public void testInvalidJvmConf() throws Exception {
         try (InputStream source = JvmConfContentHandlerTest.class.getResourceAsStream("jvm_invalid.txt")) {
-            new JvmConfContentHandler().setEntries(source, new ByteArrayOutputStream(), Collections.emptyList());
+            new JvmConfContentHandler().setEntries(source, new ByteArrayOutputStream(), emptyList());
         }
     }
 }

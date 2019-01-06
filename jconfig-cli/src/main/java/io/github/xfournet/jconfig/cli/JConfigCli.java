@@ -15,18 +15,8 @@ import io.github.xfournet.jconfig.cli.command.MergeCommand;
 import io.github.xfournet.jconfig.cli.command.RemoveCommand;
 import io.github.xfournet.jconfig.cli.command.SetCommand;
 
+@SuppressWarnings("WeakerAccess")
 public class JConfigCli {
-
-    public static void main(String[] args) {
-        if (!new JConfigCli("jconfig", defaultCommands(), Paths.get(""), path -> true).run(args)) {
-            System.exit(1);
-        }
-    }
-
-    @SuppressWarnings("WeakerAccess")
-    public static List<Command> defaultCommands() {
-        return Arrays.asList(new ApplyCommand(), new DiffCommand(), new MergeCommand(), new RemoveCommand(), new SetCommand());
-    }
 
     private final String m_programName;
     private final List<Command> m_commands;
@@ -40,7 +30,6 @@ public class JConfigCli {
         m_diffPathFilter = diffPathFilter;
     }
 
-    @SuppressWarnings("WeakerAccess")
     public boolean run(String[] args) {
         Map<String, Command> commandTable = new LinkedHashMap<>();
 
@@ -76,7 +65,7 @@ public class JConfigCli {
 
         if (error != null) {
             System.err.printf("Error: %s%n", error);
-            if (command != helpCommand) {
+            if (!helpCommand.equals(command)) {
                 return false;
             }
         }
@@ -124,5 +113,15 @@ public class JConfigCli {
         public JConfig getJConfig() {
             return m_jConfig;
         }
+    }
+
+    public static void main(String[] args) {
+        if (!new JConfigCli("jconfig", defaultCommands(), Paths.get(""), path -> true).run(args)) {
+            System.exit(1);
+        }
+    }
+
+    public static List<Command> defaultCommands() {
+        return Arrays.asList(new ApplyCommand(), new DiffCommand(), new MergeCommand(), new RemoveCommand(), new SetCommand());
     }
 }

@@ -62,7 +62,7 @@ public class JConfigImplTest {
     @DataProvider(name = "setEntries")
     public Object[][] providesSetEntries() {
         return new Object[][]{ //
-                {"setentries_1", "root_1/conf", "platform.properties", Arrays.asList("key=abc", "https.port=443")}, //
+                {"setentries_1", "root_1/conf", "platform.properties", asList("key=abc", "https.port=443")}, //
         };
     }
 
@@ -86,7 +86,7 @@ public class JConfigImplTest {
     @DataProvider(name = "removeEntries")
     public Object[][] providesRemoveEntries() {
         return new Object[][]{ //
-                {"removeentries_1", "root_1/conf", "platform.properties", Arrays.asList("dont.exist", "key")}, //
+                {"removeentries_1", "root_1/conf", "platform.properties", asList("dont.exist", "key")}, //
         };
     }
 
@@ -149,7 +149,7 @@ public class JConfigImplTest {
 
         Path testDir = root.resolve("test");
 
-        for (Path mergeSource : Arrays.asList(mergeDir, mergeFile)) {
+        for (Path mergeSource : asList(mergeDir, mergeFile)) {
 
             Util.ensureCleanDirectory(testDir);
             for (String sourceName : sourceNames) {
