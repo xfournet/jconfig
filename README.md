@@ -1,5 +1,5 @@
 [![Licence](https://img.shields.io/github/license/xfournet/jconfig.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
-[![Build Status](https://travis-ci.org/xfournet/jconfig.svg?branch=master)](https://travis-ci.org/xfournet/jconfig)
+[![Build Status](https://travis-ci.com/xfournet/jconfig.svg?branch=master)](https://travis-ci.org/xfournet/jconfig)
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.xfournet.jconfig/jconfig.svg)](https://search.maven.org/#search|ga|1|g:"io.github.xfournet.jconfig")
 [![Javadoc](https://javadoc.io/badge/io.github.xfournet.jconfig/jconfig.svg)](https://javadoc.io/doc/io.github.xfournet.jconfig/jconfig)
 
