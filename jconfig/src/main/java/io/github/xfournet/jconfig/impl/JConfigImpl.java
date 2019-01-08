@@ -24,12 +24,12 @@ public class JConfigImpl implements JConfig {
     private static final Pattern SECTION_MARKER = Pattern.compile("^\\[(.+)]( +#.*)?$");
 
     private final Path m_targetDir;
-    private Predicate<Path> m_diffPathFilter;
+    private final Predicate<Path> m_pathFilter;
     private final Function<Path, FileContentHandler> m_fileHandlerResolver;
 
-    public JConfigImpl(Path targetDir, Predicate<Path> diffPathFilter, Function<Path, FileContentHandler> fileHandlerResolver) {
+    public JConfigImpl(Path targetDir, Predicate<Path> pathFilter, Function<Path, FileContentHandler> fileHandlerResolver) {
         m_targetDir = targetDir;
-        m_diffPathFilter = diffPathFilter;
+        m_pathFilter = pathFilter;
         m_fileHandlerResolver = fileHandlerResolver;
     }
 
@@ -75,7 +75,7 @@ public class JConfigImpl implements JConfig {
                 Stream<? extends FileEntry> contentStream = zipFile.stream().
                         filter(e -> !e.isDirectory()).
                         map(e -> new ZipFileEntry(zipFile, e)).
-                        filter(c -> m_diffPathFilter.test(c.path()));
+                        filter(fe -> m_pathFilter.test(fe.path()));
 
                 merge(contentStream);
             } catch (IOException e) {
@@ -301,7 +301,7 @@ public class JConfigImpl implements JConfig {
             return walk.
                     filter(Files::isRegularFile).
                     map(dir::relativize).
-                    filter(m_diffPathFilter).
+                    filter(m_pathFilter).
                     collect(Collectors.toSet());
         } catch (IOException e) {
             throw new UncheckedIOException(e);

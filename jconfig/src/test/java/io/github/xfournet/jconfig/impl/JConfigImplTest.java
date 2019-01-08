@@ -12,6 +12,7 @@ import org.testng.annotations.Test;
 import io.github.xfournet.jconfig.JConfig;
 import io.github.xfournet.jconfig.Util;
 
+import static io.github.xfournet.jconfig.JConfigBuilder.jConfigBuilder;
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static java.util.Arrays.*;
 import static org.assertj.core.api.Assertions.*;
@@ -48,12 +49,12 @@ public class JConfigImplTest {
         }
 
         Path diffFile = root.resolve("diff.ini");
-        JConfig jConfig = JConfig.newDefaultJConfig(expectedDir);
+        JConfig jConfig = jConfigBuilder().build(expectedDir);
         jConfig.diff(testDir, diffFile);
 
         assertThat(diffFile).hasSameContentAs(expectedDiffFile);
 
-        jConfig = JConfig.newDefaultJConfig(testDir);
+        jConfig = jConfigBuilder().build(testDir);
         jConfig.apply(applyFile);
 
         assertSameDirectoryContent(testDir, expectedDir);
@@ -77,7 +78,7 @@ public class JConfigImplTest {
         Path expectedDir = root.resolve("expected");
         Path expectedFile = deploy(expectedDir, scenario, name);
 
-        JConfig jConfig = JConfig.newDefaultJConfig(testDir);
+        JConfig jConfig = jConfigBuilder().build(testDir);
         jConfig.setEntries(testDir.relativize(sourceFile), entries);
 
         assertThat(sourceFile).hasSameContentAs(expectedFile);
@@ -101,7 +102,7 @@ public class JConfigImplTest {
         Path expectedDir = root.resolve("expected");
         Path expectedFile = deploy(expectedDir, scenario, name);
 
-        JConfig jConfig = JConfig.newDefaultJConfig(testDir);
+        JConfig jConfig = jConfigBuilder().build(testDir);
         jConfig.removeEntries(testDir.relativize(sourceFile), entries);
 
         assertThat(sourceFile).hasSameContentAs(expectedFile);
@@ -156,7 +157,7 @@ public class JConfigImplTest {
                 deploy(testDir, sourcePrefix, sourceName);
             }
 
-            JConfig jConfig = JConfig.newDefaultJConfig(testDir);
+            JConfig jConfig = jConfigBuilder().build(testDir);
             jConfig.merge(mergeSource);
 
             assertSameDirectoryContent(testDir, expectedDir);
@@ -182,7 +183,7 @@ public class JConfigImplTest {
 
         Path sourceFile = deploy(root, scenario, mergeName);
 
-        JConfig jConfig = JConfig.newDefaultJConfig(testDir);
+        JConfig jConfig = jConfigBuilder().build(testDir);
         jConfig.merge(Paths.get("conf", "platform.properties"), sourceFile);
 
         assertThat(targetFile).hasSameContentAs(expectedFile);

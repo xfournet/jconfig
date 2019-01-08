@@ -1,9 +1,7 @@
 package io.github.xfournet.jconfig.cli;
 
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.function.*;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.ParameterException;
 import com.beust.jcommander.Parameters;
@@ -15,19 +13,19 @@ import io.github.xfournet.jconfig.cli.command.MergeCommand;
 import io.github.xfournet.jconfig.cli.command.RemoveCommand;
 import io.github.xfournet.jconfig.cli.command.SetCommand;
 
+import static io.github.xfournet.jconfig.JConfigBuilder.jConfigBuilder;
+
 @SuppressWarnings("WeakerAccess")
 public class JConfigCli {
 
     private final String m_programName;
     private final List<Command> m_commands;
-    private final Path m_targetDir;
-    private final Predicate<Path> m_diffPathFilter;
+    private final JConfig m_jConfig;
 
-    public JConfigCli(String programName, List<Command> commands, Path targetDir, Predicate<Path> diffPathFilter) {
+    public JConfigCli(String programName, List<Command> commands, JConfig jConfig) {
         m_programName = programName;
         m_commands = commands;
-        m_targetDir = targetDir;
-        m_diffPathFilter = diffPathFilter;
+        m_jConfig = jConfig;
     }
 
     public boolean run(String[] args) {
@@ -71,7 +69,7 @@ public class JConfigCli {
         }
 
         try {
-            command.execute(new CommandContextImpl(jc, JConfig.newDefaultJConfig(m_targetDir, m_diffPathFilter)));
+            command.execute(new CommandContextImpl(jc, m_jConfig));
         } catch (JConfigException e) {
             System.err.printf("%s: %s%n", m_programName, e.getMessage());
             return false;
@@ -116,7 +114,8 @@ public class JConfigCli {
     }
 
     public static void main(String[] args) {
-        if (!new JConfigCli("jconfig", defaultCommands(), Paths.get(""), path -> true).run(args)) {
+        JConfig jConfig = jConfigBuilder().build(Paths.get(""));
+        if (!new JConfigCli("jconfig", defaultCommands(), jConfig).run(args)) {
             System.exit(1);
         }
     }

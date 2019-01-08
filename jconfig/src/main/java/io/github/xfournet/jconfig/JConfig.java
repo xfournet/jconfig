@@ -2,59 +2,12 @@ package io.github.xfournet.jconfig;
 
 import java.nio.file.Path;
 import java.util.*;
-import java.util.function.*;
 import java.util.stream.*;
-import io.github.xfournet.jconfig.impl.JConfigImpl;
 
 /**
  * Entry point to use JConfig.
  */
 public interface JConfig {
-
-    /**
-     * Create a {@link JConfig} with a user provided {@link FileContentHandler} resolver function.
-     *
-     * @param destinationDir the destination directory for commands
-     * @param diffPathFilter the {@link Path} filter to be used when doing diff
-     * @param fileHandlerResolver a function that determine which {@link FileContentHandler} should be used for a given {@code Path}. The path is always relative.
-     * @return a new {@link JConfig} with the given {@link FileContentHandler} resolver
-     */
-    static JConfig newJConfig(Path destinationDir, Predicate<Path> diffPathFilter, Function<Path, FileContentHandler> fileHandlerResolver) {
-        return new JConfigImpl(destinationDir, diffPathFilter, fileHandlerResolver);
-    }
-
-    /**
-     * Create a {@link JConfig} with a user provided {@link FileContentHandler} resolver function.
-     *
-     * @param destinationDir the destination directory for commands
-     * @param fileHandlerResolver a function that determine which {@link FileContentHandler} should be used for a given {@code Path}. The path is always relative.
-     * @return a new {@link JConfig} with the given {@link FileContentHandler} resolver
-     */
-    static JConfig newJConfig(Path destinationDir, Function<Path, FileContentHandler> fileHandlerResolver) {
-        return newJConfig(destinationDir, path -> true, fileHandlerResolver);
-    }
-
-    /**
-     * Create a {@link JConfig} with the default{@link FileContentHandler} resolver function ({@link JConfigDefaults#getDefaultFileHandlerResolver()})
-     *
-     * @param destinationDir the destination directory for commands
-     * @param diffPathFilter the {@link Path} filter to be used when doing diff
-     * @return a new {@link JConfig} with default {@link FileContentHandler} resolver
-     */
-    static JConfig newDefaultJConfig(Path destinationDir, Predicate<Path> diffPathFilter) {
-        return newJConfig(destinationDir, diffPathFilter, JConfigDefaults.getDefaultFileHandlerResolver());
-    }
-
-    /**
-     * Create a {@link JConfig} with the default{@link FileContentHandler} resolver function ({@link JConfigDefaults#getDefaultFileHandlerResolver()})
-     *
-     * @param destinationDir the destination directory for commands
-     * @return a new {@link JConfig} with default {@link FileContentHandler} resolver
-     */
-    static JConfig newDefaultJConfig(Path destinationDir) {
-        return newJConfig(destinationDir, path -> true, JConfigDefaults.getDefaultFileHandlerResolver());
-    }
-
     /**
      * @return the target directory used by others methods
      */
