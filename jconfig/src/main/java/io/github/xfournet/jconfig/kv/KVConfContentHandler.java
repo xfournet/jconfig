@@ -65,13 +65,13 @@ public abstract class KVConfContentHandler<K> implements FileContentHandler {
     }
 
     @Override
-    public void merge(InputStream source1, InputStream source2, OutputStream result) throws IOException {
-        KVConf<K> conf1 = readConf(source1);
-        KVConf<K> conf2 = readConf(source2);
+    public void merge(InputStream contentToMerge, InputStream sourceToUpdate, OutputStream result) throws IOException {
+        KVConf<K> confToMerge = readConf(contentToMerge);
+        KVConf<K> confToUpdate = readConf(sourceToUpdate);
 
-        conf2.mergeWith(conf1);
+        confToUpdate.mergeWith(confToMerge);
 
-        writeConf(result, conf2);
+        writeConf(result, confToUpdate);
     }
 
     @Override

@@ -64,15 +64,24 @@ public class RawFileContentHandler implements FileContentHandler {
         return new Diff(true, encoding, lines);
     }
 
-    private byte[] readFully(InputStream in) throws IOException {
-        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    @Override
+    public void merge(InputStream contentToMerge, InputStream sourceToUpdate, OutputStream result) throws IOException {
+        // merge = overwrite, sourceToUpdate is ignored
+        copy(contentToMerge, result);
+    }
+
+    private void copy(InputStream in, OutputStream out) throws IOException {
         byte[] buffer = new byte[4096];
 
         int read;
         while ((read = in.read(buffer)) != -1) {
-            bos.write(buffer, 0, read);
+            out.write(buffer, 0, read);
         }
+    }
 
+    private byte[] readFully(InputStream in) throws IOException {
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
+        copy(in, bos);
         return bos.toByteArray();
     }
 

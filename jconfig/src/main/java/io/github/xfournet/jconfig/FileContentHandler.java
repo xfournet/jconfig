@@ -37,12 +37,12 @@ public interface FileContentHandler {
     /**
      * Merge two inputs to a single output.
      *
-     * @param source1 the first source of the merge that will be merged into the 2nd source
-     * @param source2 the second source of the merge into which the first source will be merged
+     * @param contentToMerge the content that will be merged into {@code sourceToUpdate}
+     * @param sourceToUpdate the source into which {@code contentToMerge} will be merged
      * @param result the output where to write the result of the merge
      * @throws IOException in case an error occurs on a stream
      */
-    default void merge(InputStream source1, InputStream source2, OutputStream result) throws IOException {
+    default void merge(InputStream contentToMerge, InputStream sourceToUpdate, OutputStream result) throws IOException {
         throw new UnsupportedOperationException();
     }
 
