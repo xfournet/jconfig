@@ -182,7 +182,7 @@ public class JConfigImpl implements JConfig {
                 if (currentSection != null) {
                     sectionLines.add(line);
                 } else if (isContentLine(line)) {
-                    throw new IllegalStateException("Content outside section in " + diffFile);
+                    throw new IllegalArgumentException("Content outside section in " + diffFile);
                 }
             }
         }
@@ -190,6 +190,13 @@ public class JConfigImpl implements JConfig {
         if (currentSection != null) {
             sections.add(buildSection(currentSection, sectionLines));
         }
+
+        Set<String> duplicates = new HashSet<>();
+        sections.stream().map(Section::getPath).forEach(path -> {
+            if (!duplicates.add(path)) {
+                throw new IllegalArgumentException("Duplicate section for path: " + path);
+            }
+        });
 
         return sections;
     }
@@ -229,7 +236,7 @@ public class JConfigImpl implements JConfig {
             diff = new Diff(false, null, sectionLines);
         } else if ("delete".equalsIgnoreCase(mode)) {
             if (sectionLines.stream().anyMatch(JConfigImpl::isContentLine)) {
-                throw new IllegalStateException("Delete section contains content");
+                throw new IllegalArgumentException("Delete section contains content");
             }
 
             diff = null;
