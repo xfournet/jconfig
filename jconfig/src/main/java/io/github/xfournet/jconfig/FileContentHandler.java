@@ -80,7 +80,7 @@ public interface FileContentHandler {
      * {@code Map} or {@code Properties} can be easily use here thanks to function reference, eg {@code varMap::get} or {@code varProps::getProperty}
      * @throws IOException in case an error occurs on a stream
      */
-    default void filter(InputStream source, OutputStream result, Function<String, String> variableResolver) throws IOException {
+    default void filter(InputStream source, OutputStream result, UnaryOperator<String> variableResolver) throws IOException {
         throw new UnsupportedOperationException();
     }
 }

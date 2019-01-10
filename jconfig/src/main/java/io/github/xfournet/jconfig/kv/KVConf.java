@@ -190,7 +190,7 @@ class KVConf<K> {
         return lines;
     }
 
-    void filter(Function<String, String> variableResolver) {
+    void filter(UnaryOperator<String> variableResolver) {
         m_entries.forEach(e -> e.filter(variableResolver));
     }
 }

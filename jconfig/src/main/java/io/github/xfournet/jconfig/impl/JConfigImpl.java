@@ -163,7 +163,7 @@ public class JConfigImpl implements JConfig {
     }
 
     @Override
-    public void filter(Path file, Function<String, String> variableResolver) {
+    public void filter(Path file, UnaryOperator<String> variableResolver) {
         FileContentHandler fileContentHandler = retrieveFileHandler(file);
         Path resolvedFile = m_targetDir.resolve(file);
 

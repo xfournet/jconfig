@@ -84,5 +84,5 @@ public interface JConfig {
      * @param variableResolver a function that permit to resolve the variable value.
      * {@code Map} or {@code Properties} can be easily use here thanks to function reference, eg {@code varMap::get} or {@code varProps::getProperty}
      */
-    void filter(Path file, Function<String, String> variableResolver);
+    void filter(Path file, UnaryOperator<String> variableResolver);
 }

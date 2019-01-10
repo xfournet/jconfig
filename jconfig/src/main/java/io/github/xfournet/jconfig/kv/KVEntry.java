@@ -30,11 +30,11 @@ public class KVEntry<K> {
         m_comments.addAll(comments);
     }
 
-    void filter(Function<String, String> variableResolver) {
+    void filter(UnaryOperator<String> variableResolver) {
         m_value = filter(variableResolver, m_value);
     }
 
-    private static String filter(Function<String, String> varResolver, String value) {
+    private static String filter(UnaryOperator<String> varResolver, String value) {
         String lastValue;
         do {
             lastValue = value;
@@ -49,7 +49,7 @@ public class KVEntry<K> {
         return value;
     }
 
-    private static String resolveVar(Function<String, String> varResolver, String key) {
+    private static String resolveVar(UnaryOperator<String> varResolver, String key) {
         String value = varResolver.apply(key);
         if (value == null) {
             throw new IllegalArgumentException("Variable not found: " + key);
