@@ -2,6 +2,7 @@ package io.github.xfournet.jconfig;
 
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.*;
 import java.util.stream.*;
 
 /**
@@ -75,4 +76,13 @@ public interface JConfig {
      * @param entries the entries to be removed
      */
     void removeEntries(Path file, List<String> entries);
+
+    /**
+     * Update file with specified variables.
+     *
+     * @param file the file to be updated, relative to {@link #targetDir()}
+     * @param variableResolver a function that permit to resolve the variable value.
+     * {@code Map} or {@code Properties} can be easily use here thanks to function reference, eg {@code varMap::get} or {@code varProps::getProperty}
+     */
+    void filter(Path file, Function<String, String> variableResolver);
 }

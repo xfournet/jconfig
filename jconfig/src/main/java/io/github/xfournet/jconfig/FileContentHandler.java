@@ -2,6 +2,7 @@ package io.github.xfournet.jconfig;
 
 import java.io.*;
 import java.util.*;
+import java.util.function.*;
 import javax.annotation.*;
 
 /**
@@ -67,6 +68,19 @@ public interface FileContentHandler {
      * @throws IOException in case an error occurs on a stream
      */
     default void removeEntries(InputStream source, OutputStream result, List<String> entries) throws IOException {
+        throw new UnsupportedOperationException();
+    }
+
+    /**
+     * Update content with specified variables.
+     *
+     * @param source the input where to read the source of the filtering process
+     * @param result the output where to write the result of the filtering process
+     * @param variableResolver a function that permit to resolve the variable value.
+     * {@code Map} or {@code Properties} can be easily use here thanks to function reference, eg {@code varMap::get} or {@code varProps::getProperty}
+     * @throws IOException in case an error occurs on a stream
+     */
+    default void filter(InputStream source, OutputStream result, Function<String, String> variableResolver) throws IOException {
         throw new UnsupportedOperationException();
     }
 }

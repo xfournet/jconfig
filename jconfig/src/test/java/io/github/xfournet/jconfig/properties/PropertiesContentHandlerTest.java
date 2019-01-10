@@ -4,6 +4,7 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.*;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
@@ -31,7 +32,33 @@ public class PropertiesContentHandlerTest {
              OutputStream result = Files.newOutputStream(resultFile)) {
 
             Files.copy(expectedResultInput, expectedFile);
+
             new PropertiesContentHandler().merge(source1, source2, result);
+        }
+
+        assertThat(resultFile).hasSameContentAs(expectedFile);
+    }
+
+    @DataProvider(name = "propertiesFiltering")
+    public Object[][] providesPropertiesFiltering() {
+        return new Object[][]{{ //
+                Paths.get("properties_filter1"), "file_2.properties", Collections.singletonMap("var1", "999"), "filter_1_result.properties"}, //
+        };
+    }
+
+    @Test(dataProvider = "propertiesFiltering")
+    public void testPropertiesFiltering(Path root, String sourceName, Map<String, String> vars, String expectedResultName) throws Exception {
+        ensureCleanDirectory(root);
+        Path expectedFile = root.resolve("expected");
+        Path resultFile = root.resolve("result");
+
+        try (InputStream source = PropertiesContentHandlerTest.class.getResourceAsStream(sourceName);
+             InputStream expectedResultInput = PropertiesContentHandlerTest.class.getResourceAsStream(expectedResultName);
+             OutputStream result = Files.newOutputStream(resultFile)) {
+
+            Files.copy(expectedResultInput, expectedFile);
+
+            new PropertiesContentHandler().filter(source, result, vars::get);
         }
 
         assertThat(resultFile).hasSameContentAs(expectedFile);

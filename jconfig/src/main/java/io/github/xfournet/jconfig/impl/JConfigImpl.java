@@ -162,6 +162,22 @@ public class JConfigImpl implements JConfig {
         }
     }
 
+    @Override
+    public void filter(Path file, Function<String, String> variableResolver) {
+        FileContentHandler fileContentHandler = retrieveFileHandler(file);
+        Path resolvedFile = m_targetDir.resolve(file);
+
+        try (Transaction tx = new Transaction()) {
+            Path outputFile = tx.getOutputFile(resolvedFile);
+            try (InputStream sourceInput = Files.newInputStream(resolvedFile); OutputStream resultOutput = Files.newOutputStream(outputFile)) {
+                fileContentHandler.filter(sourceInput, resultOutput, variableResolver);
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+            tx.commit();
+        }
+    }
+
     private FileContentHandler retrieveFileHandler(Path path) {
         return Optional.of(path).
                 map(m_fileHandlerResolver).

@@ -98,6 +98,13 @@ public abstract class KVConfContentHandler<K> implements FileContentHandler {
         writeConf(result, conf);
     }
 
+    @Override
+    public void filter(InputStream source, OutputStream result, Function<String, String> variableResolver) throws IOException {
+        KVConf<K> conf = readConf(source);
+        conf.filter(variableResolver);
+        writeConf(result, conf);
+    }
+
     private KVConf<K> readConf(@Nullable InputStream source) throws IOException {
         return KVConf.readConf(source, m_charset, m_entryParser);
     }

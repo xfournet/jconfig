@@ -1,10 +1,11 @@
 package io.github.xfournet.jconfig.kv;
 
 import java.util.*;
+import java.util.function.*;
 
 public class KVEntry<K> {
     private final K m_key;
-    private final String m_value;
+    private String m_value;
     private final List<String> m_comments = new ArrayList<>();
 
     public KVEntry(K key, String value) {
@@ -27,5 +28,33 @@ public class KVEntry<K> {
     void setComments(List<String> comments) {
         m_comments.clear();
         m_comments.addAll(comments);
+    }
+
+    void filter(Function<String, String> variableResolver) {
+        m_value = filter(variableResolver, m_value);
+    }
+
+    private static String filter(Function<String, String> varResolver, String value) {
+        String lastValue;
+        do {
+            lastValue = value;
+            int pos1 = value.indexOf("@{");
+            if (pos1 != -1) {
+                int pos2 = value.indexOf('}', pos1);
+                if (pos2 != -1) {
+                    value = value.substring(0, pos1) + resolveVar(varResolver, value.substring(pos1 + 2, pos2)) + value.substring(pos2 + 1);
+                    break;
+                }
+            }
+        } while (!value.equals(lastValue));
+        return value;
+    }
+
+    private static String resolveVar(Function<String, String> varResolver, String key) {
+        String value = varResolver.apply(key);
+        if (value == null) {
+            throw new IllegalArgumentException("Argument not found: " + key);
+        }
+        return value;
     }
 }

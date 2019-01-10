@@ -189,6 +189,27 @@ public class JConfigImplTest {
         assertThat(targetFile).hasSameContentAs(expectedFile);
     }
 
+    @DataProvider(name = "filterFile")
+    public Object[][] providesFilterFile() {
+        return new Object[][]{ //
+                {"filter_1", "file_1.properties", Collections.singletonMap("var1", "999"), "filter_1_result.properties"}, //
+        };
+    }
+
+    @Test(dataProvider = "filterFile")
+    public void testFilterFile(String scenario, String sourceName, Map<String, String> vars, String expectedName) throws Exception {
+        Path root = Paths.get("jconfig/" + scenario);
+        Util.ensureCleanDirectory(root);
+
+        Path targetFile = deploy(root, scenario, sourceName);
+        Path expectedFile = deploy(root, scenario, expectedName);
+
+        JConfig jConfig = jConfigBuilder().build(root);
+        jConfig.filter(Paths.get(sourceName), vars::get);
+
+        assertThat(targetFile).hasSameContentAs(expectedFile);
+    }
+
     private void assertSameDirectoryContent(Path testDir, Path expectedDir) throws IOException {
         Set<Path> validatedTestFiles = new HashSet<>();
 
@@ -220,8 +241,8 @@ public class JConfigImplTest {
 
     private Path deploy(Path root, String resourcePrefix, String name) throws IOException {
         Path output = root.resolve(name);
+        Files.createDirectories(output.getParent());
         try (InputStream in = JConfigImplTest.class.getResourceAsStream(resourcePrefix + "/" + name)) {
-            Files.createDirectories(output.getParent());
             Files.copy(in, output, REPLACE_EXISTING);
         }
         return output;
