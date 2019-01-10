@@ -23,6 +23,10 @@ public class JConfigImpl implements JConfig {
     private static final Charset DIFF_CHARSET = UTF_8;
     private static final Pattern SECTION_MARKER = Pattern.compile("^\\[(.+)]( +#.*)?$");
 
+    private static final String SECTION_OVERWRITE = "overwrite";
+    private static final String SECTION_MERGE = "merge";
+    private static final String SECTION_DELETE = "delete";
+
     private final Path m_targetDir;
     private final Predicate<Path> m_pathFilter;
     private final Function<Path, FileContentHandler> m_fileHandlerResolver;
@@ -213,35 +217,34 @@ public class JConfigImpl implements JConfig {
         }
 
         String[] elements = currentSection.split(" +");
-        if (elements.length < 1 || elements.length > 2) {
+        if (!(elements.length == 2 || elements.length == 3)) {
             throw new IllegalArgumentException("Invalid section header : " + currentSection);
         }
 
         String fileName = elements[0];
-        String mode = null;
-        String encoding = null;
-        if (elements.length == 2) {
-            String element = elements[1];
-            if (element.startsWith("@")) {
-                encoding = element.substring(1);
-            } else {
-                mode = element;
-            }
-        }
+        String mode = elements[1];
+        String encoding = elements.length == 3 ? elements[2].substring(1) : null;
 
         Diff diff;
-        if (mode == null) {
-            diff = new Diff(true, encoding, sectionLines);
-        } else if ("apply".equalsIgnoreCase(mode)) {
-            diff = new Diff(false, null, sectionLines);
-        } else if ("delete".equalsIgnoreCase(mode)) {
-            if (sectionLines.stream().anyMatch(JConfigImpl::isContentLine)) {
-                throw new IllegalArgumentException("Delete section contains content");
-            }
+        switch (mode) {
+            case SECTION_OVERWRITE:
+                diff = new Diff(true, encoding, sectionLines);
+                break;
 
-            diff = null;
-        } else {
-            throw new IllegalArgumentException("Invalid section header : " + currentSection);
+            case SECTION_MERGE:
+                diff = new Diff(false, null, sectionLines);
+                break;
+
+            case SECTION_DELETE:
+                if (sectionLines.stream().anyMatch(JConfigImpl::isContentLine)) {
+                    throw new IllegalArgumentException("Delete section contains content");
+                }
+
+                diff = null;
+                break;
+
+            default:
+                throw new IllegalArgumentException("Invalid section header : " + currentSection);
         }
 
         return new Section(fileName, diff);
@@ -324,22 +327,22 @@ public class JConfigImpl implements JConfig {
                 String encoding;
                 if (diff != null) {
                     if (diff.isOverwrite()) {
-                        mode = "";
+                        mode = SECTION_OVERWRITE;
                     } else {
-                        mode = " apply";
+                        mode = SECTION_MERGE;
                     }
                     encoding = diff.getEncoding();
-                    if (encoding == null) {
-                        encoding = "";
-                    } else {
+                    if (encoding != null) {
                         encoding = " @" + encoding.toLowerCase();
+                    } else {
+                        encoding = "";
                     }
                 } else {
-                    mode = " delete";
+                    mode = SECTION_DELETE;
                     encoding = "";
                 }
 
-                pw.printf("[%s%s%s]%n", section.getPath(), mode, encoding);
+                pw.printf("[%s %s%s]%n", section.getPath(), mode, encoding);
                 if (diff != null) {
                     diff.getLines().forEach(pw::println);
                 }
