@@ -43,7 +43,6 @@ public class KVEntry<K> {
                 int pos2 = value.indexOf('}', pos1);
                 if (pos2 != -1) {
                     value = value.substring(0, pos1) + resolveVar(varResolver, value.substring(pos1 + 2, pos2)) + value.substring(pos2 + 1);
-                    break;
                 }
             }
         } while (!value.equals(lastValue));

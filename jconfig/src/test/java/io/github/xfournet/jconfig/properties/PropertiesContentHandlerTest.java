@@ -41,8 +41,12 @@ public class PropertiesContentHandlerTest {
 
     @DataProvider(name = "propertiesFiltering")
     public Object[][] providesPropertiesFiltering() {
+        Map<String, String> vars = new HashMap<>();
+        vars.put("var1", "999");
+        vars.put("var2", "80%");
+
         return new Object[][]{{ //
-                Paths.get("properties_filter1"), "file_2.properties", Collections.singletonMap("var1", "999"), "filter_1_result.properties"}, //
+                Paths.get("properties_filter1"), "file_2.properties", vars, "filter_1_result.properties"}, //
         };
     }
 
