@@ -8,6 +8,7 @@ import com.beust.jcommander.Parameters;
 import io.github.xfournet.jconfig.JConfig;
 import io.github.xfournet.jconfig.cli.command.ApplyCommand;
 import io.github.xfournet.jconfig.cli.command.DiffCommand;
+import io.github.xfournet.jconfig.cli.command.FilterCommand;
 import io.github.xfournet.jconfig.cli.command.HelpCommand;
 import io.github.xfournet.jconfig.cli.command.MergeCommand;
 import io.github.xfournet.jconfig.cli.command.RemoveCommand;
@@ -121,6 +122,6 @@ public class JConfigCli {
     }
 
     public static List<Command> defaultCommands() {
-        return Arrays.asList(new ApplyCommand(), new DiffCommand(), new MergeCommand(), new RemoveCommand(), new SetCommand());
+        return Arrays.asList(new ApplyCommand(), new DiffCommand(), new FilterCommand(), new MergeCommand(), new RemoveCommand(), new SetCommand());
     }
 }

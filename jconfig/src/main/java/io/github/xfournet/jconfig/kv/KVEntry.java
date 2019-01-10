@@ -53,7 +53,7 @@ public class KVEntry<K> {
     private static String resolveVar(Function<String, String> varResolver, String key) {
         String value = varResolver.apply(key);
         if (value == null) {
-            throw new IllegalArgumentException("Argument not found: " + key);
+            throw new IllegalArgumentException("Variable not found: " + key);
         }
         return value;
     }

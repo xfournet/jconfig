@@ -7,10 +7,10 @@ import com.beust.jcommander.Parameters;
 import io.github.xfournet.jconfig.cli.Command;
 import io.github.xfournet.jconfig.cli.CommandContext;
 
-@Parameters(commandNames = "set", commandDescription = "Set the value of one or many entries in a configuration file")
+@Parameters(commandNames = "set", commandDescription = "Set the value of one or many entries in a file")
 public class SetCommand implements Command {
 
-    @Parameter(names = {"--file", "-f"}, description = "Configuration file to be updated", required = true)
+    @Parameter(names = {"--file", "-f"}, description = "File to be updated", required = true)
     private String m_file;
 
     @Parameter(description = "<entry 1> [<entry 2> ... <entry n>]", required = true)
