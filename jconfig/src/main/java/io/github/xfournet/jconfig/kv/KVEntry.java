@@ -4,6 +4,9 @@ import java.util.*;
 import java.util.function.*;
 
 public class KVEntry<K> {
+    public static final String VAR_TOKEN_BEGIN = "@{";
+    public static final String VAR_TOKEN_END = "}";
+
     private final K m_key;
     private String m_value;
     private final List<String> m_comments = new ArrayList<>();
@@ -35,21 +38,26 @@ public class KVEntry<K> {
     }
 
     private static String filter(UnaryOperator<String> varResolver, String value) {
-        String currentValue = value;
-        String lastValue;
-        do {
-            lastValue = currentValue;
-            int pos1 = currentValue.indexOf("@{");
-            if (pos1 != -1) {
-                int pos2 = currentValue.indexOf('}', pos1);
-                if (pos2 != -1) {
-                    currentValue = currentValue.substring(0, pos1) + //
-                            resolveVar(varResolver, currentValue.substring(pos1 + 2, pos2)) + //
-                            currentValue.substring(pos2 + 1);
+        String filteredValue = value;
+        int searchFrom = 0;
+        while (searchFrom != -1) {
+            searchFrom = -1;
+            int begin = filteredValue.indexOf(VAR_TOKEN_BEGIN, searchFrom);
+            if (begin != -1) {
+                int end = filteredValue.indexOf(VAR_TOKEN_END, begin);
+                if (end != -1) {
+                    String varName = filteredValue.substring(begin + VAR_TOKEN_BEGIN.length(), end);
+                    String filteredToken = resolveVar(varResolver, varName);
+                    filteredValue = filteredValue.substring(0, begin) + filteredToken + filteredValue.substring(end + VAR_TOKEN_END.length());
+
+                    // next search to be done after the resolved value so:
+                    // - variable are not recursively resolved, if needed this should done in the variable resolver itself
+                    // - variable resolver could process unresolved values untouched by returning {@code VAR_TOKEN_BEGIN + varName + VAR_TOKEN_END}
+                    searchFrom = begin + filteredToken.length();
                 }
             }
-        } while (!currentValue.equals(lastValue));
-        return currentValue;
+        }
+        return filteredValue;
     }
 
     private static String resolveVar(UnaryOperator<String> varResolver, String key) {
