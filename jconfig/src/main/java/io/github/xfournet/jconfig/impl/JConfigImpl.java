@@ -241,6 +241,12 @@ public class JConfigImpl implements JConfig {
         String mode = elements[1];
         String encoding = elements.length == 3 ? elements[2].substring(1) : null;
 
+        Diff diff = getDiff(currentSection, sectionLines, mode, encoding);
+        return new Section(fileName, diff);
+    }
+
+    @Nullable
+    private Diff getDiff(String currentSection, List<String> sectionLines, String mode, @Nullable String encoding) {
         Diff diff;
         switch (mode) {
             case SECTION_OVERWRITE:
@@ -262,8 +268,7 @@ public class JConfigImpl implements JConfig {
             default:
                 throw new IllegalArgumentException("Invalid section header : " + currentSection);
         }
-
-        return new Section(fileName, diff);
+        return diff;
     }
 
     private void processSection(Transaction tx, Section section) {

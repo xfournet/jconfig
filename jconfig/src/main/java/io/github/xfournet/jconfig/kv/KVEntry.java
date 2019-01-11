@@ -35,18 +35,21 @@ public class KVEntry<K> {
     }
 
     private static String filter(UnaryOperator<String> varResolver, String value) {
+        String currentValue = value;
         String lastValue;
         do {
-            lastValue = value;
-            int pos1 = value.indexOf("@{");
+            lastValue = currentValue;
+            int pos1 = currentValue.indexOf("@{");
             if (pos1 != -1) {
-                int pos2 = value.indexOf('}', pos1);
+                int pos2 = currentValue.indexOf('}', pos1);
                 if (pos2 != -1) {
-                    value = value.substring(0, pos1) + resolveVar(varResolver, value.substring(pos1 + 2, pos2)) + value.substring(pos2 + 1);
+                    currentValue = currentValue.substring(0, pos1) + //
+                            resolveVar(varResolver, currentValue.substring(pos1 + 2, pos2)) + //
+                            currentValue.substring(pos2 + 1);
                 }
             }
-        } while (!value.equals(lastValue));
-        return value;
+        } while (!currentValue.equals(lastValue));
+        return currentValue;
     }
 
     private static String resolveVar(UnaryOperator<String> varResolver, String key) {
