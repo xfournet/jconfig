@@ -53,11 +53,11 @@ public class JConfigBuilder {
     /**
      * Create a {@link JConfig} for the specified path.
      *
-     * @param destinationDir the destination directory for commands
-     * @return a new {@link JConfig} for the specified {@code destinationDir}
+     * @param targetDir the target directory for commands
+     * @return a new {@link JConfig} for the specified {@code targetDir}
      */
-    public JConfig build(Path destinationDir) {
-        return new JConfigImpl(destinationDir, m_pathFilter, m_fileContentHandlerResolver);
+    public JConfig build(Path targetDir) {
+        return new JConfigImpl(targetDir, m_pathFilter, m_fileContentHandlerResolver);
     }
 
     /**

@@ -4,12 +4,13 @@ import io.github.xfournet.jconfig.kv.KVConfContentHandler;
 import io.github.xfournet.jconfig.kv.KVEntry;
 
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
+import static java.util.function.UnaryOperator.*;
 
 // TODO escaping and multiline (difficult ?) should be implemented for better accuracy
 public final class PropertiesContentHandler extends KVConfContentHandler<String> {
 
     public PropertiesContentHandler() {
-        super(ISO_8859_1, PropertiesContentHandler::parse, PropertiesContentHandler::format, s -> s);
+        super(ISO_8859_1, PropertiesContentHandler::parse, PropertiesContentHandler::format, identity());
     }
 
     private static KVEntry<String> parse(String line) {
