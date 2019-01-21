@@ -72,15 +72,14 @@ public interface FileContentHandler {
     }
 
     /**
-     * Update content with specified variables.
+     * Update content by processing expression in it.
      *
      * @param source the input where to read the source of the filtering process
      * @param result the output where to write the result of the filtering process
-     * @param variableResolver a function that permit to resolve the variable value.
-     * {@code Map} or {@code Properties} can be easily use here thanks to function reference, eg {@code varMap::get} or {@code varProps::getProperty}
+     * @param expressionProcessor a function that permit to process an expression.
      * @throws IOException in case an error occurs on a stream
      */
-    default void filter(InputStream source, OutputStream result, UnaryOperator<String> variableResolver) throws IOException {
+    default void filter(InputStream source, OutputStream result, UnaryOperator<String> expressionProcessor) throws IOException {
         throw new UnsupportedOperationException();
     }
 }

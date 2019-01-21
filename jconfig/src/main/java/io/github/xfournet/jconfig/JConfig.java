@@ -78,11 +78,11 @@ public interface JConfig {
     void removeEntries(Path file, List<String> entries);
 
     /**
-     * Update file with specified variables.
+     * Update file by processing expression in it.
      *
      * @param file the file to be updated, relative to {@link #targetDir()}
-     * @param variableResolver a function that permit to resolve the variable value.
-     * {@code Map} or {@code Properties} can be easily use here thanks to function reference, eg {@code varMap::get} or {@code varProps::getProperty}
+     * @param expressionProcessor a function that permit to process an expression.
+     * {@code Map} or {@code Properties} can be easily use here thanks to function reference, eg {@code map::get} or {@code props::getProperty}
      */
-    void filter(Path file, UnaryOperator<String> variableResolver);
+    void filter(Path file, UnaryOperator<String> expressionProcessor);
 }

@@ -99,9 +99,9 @@ public abstract class KVConfContentHandler<K> implements FileContentHandler {
     }
 
     @Override
-    public void filter(InputStream source, OutputStream result, UnaryOperator<String> variableResolver) throws IOException {
+    public void filter(InputStream source, OutputStream result, UnaryOperator<String> expressionProcessor) throws IOException {
         KVConf<K> conf = readConf(source);
-        conf.filter(variableResolver);
+        conf.filter(expressionProcessor);
         writeConf(result, conf);
     }
 

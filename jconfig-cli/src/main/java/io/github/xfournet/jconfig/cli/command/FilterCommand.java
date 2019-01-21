@@ -13,21 +13,21 @@ public class FilterCommand implements Command {
     @Parameter(names = {"--file", "-f"}, description = "File to be updated", required = true)
     private String m_file;
 
-    @Parameter(description = "<var1=value> [<var2=value> ... <varn=value>]", required = true)
-    private List<String> m_vars = new ArrayList<>();
+    @Parameter(description = "<expr1=value> [<expr2=value> ... <exprn=value>]", required = true)
+    private List<String> m_expressionArgs = new ArrayList<>();
 
     @Override
     public void execute(CommandContext ctx) {
-        Map<String, String> vars = new HashMap<>();
-        for (String var : m_vars) {
-            int pos = var.indexOf('=');
+        Map<String, String> expressionMapping = new HashMap<>();
+        for (String arg : m_expressionArgs) {
+            int pos = arg.indexOf('=');
             if (pos != -1) {
-                vars.put(var.substring(0, pos), var.substring(pos + 1));
+                expressionMapping.put(arg.substring(0, pos), arg.substring(pos + 1));
             } else {
-                vars.put(var, "");
+                expressionMapping.put(arg, "");
             }
         }
 
-        ctx.getJConfig().filter(Paths.get(m_file), vars::get);
+        ctx.getJConfig().filter(Paths.get(m_file), expressionMapping::get);
     }
 }

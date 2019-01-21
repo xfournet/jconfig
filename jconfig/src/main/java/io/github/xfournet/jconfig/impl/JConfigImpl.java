@@ -163,14 +163,14 @@ public class JConfigImpl implements JConfig {
     }
 
     @Override
-    public void filter(Path file, UnaryOperator<String> variableResolver) {
+    public void filter(Path file, UnaryOperator<String> expressionProcessor) {
         FileContentHandler fileContentHandler = retrieveFileHandler(file);
         Path resolvedFile = m_targetDir.resolve(file);
 
         try (Transaction tx = new Transaction()) {
             Path outputFile = tx.getOutputFile(resolvedFile);
             try (InputStream sourceInput = Files.newInputStream(resolvedFile); OutputStream resultOutput = Files.newOutputStream(outputFile)) {
-                fileContentHandler.filter(sourceInput, resultOutput, variableResolver);
+                fileContentHandler.filter(sourceInput, resultOutput, expressionProcessor);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
