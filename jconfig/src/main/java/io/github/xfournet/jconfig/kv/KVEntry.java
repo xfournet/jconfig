@@ -37,12 +37,12 @@ public class KVEntry<K> {
         m_value = filter(expressionProcessor, m_value);
     }
 
-    private static String filter(UnaryOperator<String> expressionProcessor, String value) {
+    static String filter(UnaryOperator<String> expressionProcessor, String value) {
         String filteredValue = value;
         int searchFrom = 0;
         while (searchFrom != -1) {
-            searchFrom = -1;
             int begin = filteredValue.indexOf(EXPRESSION_TOKEN_BEGIN, searchFrom);
+            searchFrom = -1;
             if (begin != -1) {
                 int end = filteredValue.indexOf(EXPRESSION_TOKEN_END, begin);
                 if (end != -1) {
