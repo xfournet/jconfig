@@ -50,9 +50,7 @@ public class KVEntry<K> {
                     String filteredToken = processExpression(expressionProcessor, expression);
                     filteredValue = filteredValue.substring(0, begin) + filteredToken + filteredValue.substring(end + EXPRESSION_TOKEN_END.length());
 
-                    // next search to be done after the processed expression so:
-                    // - expression are not recursively processed, if needed this should done in the expression processor itself
-                    // - expression processor could let expression untouched by returning {@code EXPRESSION_TOKEN_BEGIN + expression + EXPRESSION_TOKEN_END}
+                    // next search to be done after the processed expression so expression are not recursively processed, if needed this should done in the expression processor itself
                     searchFrom = begin + filteredToken.length();
                 }
             }
@@ -62,9 +60,10 @@ public class KVEntry<K> {
 
     private static String processExpression(UnaryOperator<String> expressionProcessor, String expression) {
         String value = expressionProcessor.apply(expression);
-        if (value == null) {
-            throw new IllegalArgumentException("Expression not processed: " + expression);
+        if (value != null) {
+            return value;
+        } else {
+            return EXPRESSION_TOKEN_BEGIN + expression + EXPRESSION_TOKEN_END;
         }
-        return value;
     }
 }

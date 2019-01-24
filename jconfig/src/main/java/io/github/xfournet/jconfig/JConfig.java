@@ -78,7 +78,13 @@ public interface JConfig {
     void removeEntries(Path file, List<String> entries);
 
     /**
-     * Update file by processing expression in it.
+     * Update file by processing expression in it.<br>
+     * {@code expressionProcessor} can either:
+     * <ul>
+     * <li>return a non-{@code null} value to be applied for the expression replacement</li>
+     * <li>return {@code null} to indicate that the filtering don't have to be done for the given expression</li>
+     * <li>throw an exception to indicate an error</li>
+     * </ul>
      *
      * @param file the file to be updated, relative to {@link #targetDir()}
      * @param expressionProcessor a function that permit to process an expression.
