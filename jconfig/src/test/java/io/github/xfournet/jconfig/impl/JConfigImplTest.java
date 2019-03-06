@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.function.*;
 import java.util.stream.*;
 import java.util.zip.*;
 import org.testng.annotations.DataProvider;
@@ -114,9 +115,10 @@ public class JConfigImplTest {
                 {"merge_1", "root_1",//
                         asList("conf/jvm.conf", "conf/log4j.properties", "conf/platform.properties", "conf/unmodified.properties", "lib/plugin0.jar",
                                "var/data/default0.hash"), //
-                        asList("conf/jvm.conf", "conf/log4j.properties", "lib/plugin.jar", "var/data/default.hash"), //
+                        asList("conf/jvm.conf", "conf/log4j.properties", "lib/plugin.jar", "var/data/default.hash", "var/log/.empty",
+                               "var/will-be-ignored/some-file.txt", "var/will-be-ignored/some-directory/another-file.txt"), //
                         asList("conf/jvm.conf", "conf/log4j.properties", "conf/platform.properties", "conf/unmodified.properties", "lib/plugin.jar",
-                               "lib/plugin0.jar", "var/data/default.hash", "var/data/default0.hash")}, //
+                               "lib/plugin0.jar", "var/data/default.hash", "var/data/default0.hash", "var/log/.empty")}, //
         };
     }
 
@@ -145,7 +147,10 @@ public class JConfigImplTest {
 
         Path expectedDir = root.resolve("expected");
         for (String resultName : resultNames) {
-            deploy(expectedDir, scenario + "/expected", resultName);
+            Path path = deploy(expectedDir, scenario + "/expected", resultName);
+            if (".empty".equals(path.getFileName().toString())) {
+                Files.delete(path);
+            }
         }
 
         Path testDir = root.resolve("test");
@@ -157,7 +162,8 @@ public class JConfigImplTest {
                 deploy(testDir, sourcePrefix, sourceName);
             }
 
-            JConfig jConfig = jConfigBuilder().build(testDir);
+            Predicate<Path> pathFilter = p -> !".empty".equals(p.getFileName().toString()) && !p.toString().contains("will-be-ignored");
+            JConfig jConfig = jConfigBuilder().setPathFilter(pathFilter).build(testDir);
             jConfig.merge(mergeSource);
 
             assertSameDirectoryContent(testDir, expectedDir);
@@ -214,28 +220,23 @@ public class JConfigImplTest {
         Set<Path> validatedTestFiles = new HashSet<>();
 
         try (Stream<Path> expectedPaths = Files.walk(expectedDir)) {
-            expectedPaths.filter(Files::isRegularFile).forEach(expectedFile -> {
+            expectedPaths.forEach(expectedFile -> {
                 Path relativePath = expectedDir.relativize(expectedFile);
                 Path resultFile = testDir.resolve(relativePath);
-                assertThat(resultFile).isRegularFile();
 
-                ByteArrayOutputStream bos = new ByteArrayOutputStream();
-                try (InputStream in = Files.newInputStream(expectedFile)) {
-                    copy(in, bos);
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
+                if (Files.isRegularFile(expectedFile)) {
+                    assertThat(resultFile).isRegularFile().hasBinaryContent(readAllBytes(expectedFile));
+                } else {
+                    assertThat(resultFile).isDirectory();
                 }
-
-                assertThat(resultFile).hasBinaryContent(bos.toByteArray());
                 validatedTestFiles.add(resultFile);
             });
         }
 
         try (Stream<Path> resultPaths = Files.walk(testDir)) {
-            resultPaths //
-                    .filter(Files::isRegularFile) //
-                    .filter(resultFile -> !validatedTestFiles.contains(resultFile)) //
-                    .forEach(resultFile -> fail("Unexpected file in result: " + resultFile));
+            resultPaths.
+                    filter(resultFile -> !validatedTestFiles.contains(resultFile)).
+                    forEach(resultFile -> fail("Unexpected file in result: " + resultFile));
         }
     }
 
@@ -253,6 +254,14 @@ public class JConfigImplTest {
         int read;
         while ((read = in.read(buffer)) != -1) {
             out.write(buffer, 0, read);
+        }
+    }
+
+    private static byte[] readAllBytes(Path path) {
+        try {
+            return Files.readAllBytes(path);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 }
