@@ -16,6 +16,7 @@ import io.github.xfournet.jconfig.FileContentHandler;
 import io.github.xfournet.jconfig.FileEntry;
 import io.github.xfournet.jconfig.JConfig;
 
+import static io.github.xfournet.jconfig.impl.JConfigImpl.FileEntryImpl.*;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class JConfigImpl implements JConfig {
@@ -226,16 +227,6 @@ public class JConfigImpl implements JConfig {
         }
 
         return result;
-    }
-
-    private FileEntryImpl newRegularFileEntry(Path path, InputStreamSupplier inputStreamSupplier) {
-        return new FileEntryImpl(path, false, inputStreamSupplier);
-    }
-
-    private FileEntryImpl newDirectoryEntry(Path path) {
-        return new FileEntryImpl(path, true, () -> {
-            throw new IOException("Cannot read a directory");
-        });
     }
 
     //region apply related code
@@ -456,7 +447,17 @@ public class JConfigImpl implements JConfig {
         InputStream get() throws IOException;
     }
 
-    private static final class FileEntryImpl implements FileEntry {
+    static final class FileEntryImpl implements FileEntry {
+        static FileEntryImpl newRegularFileEntry(Path path, InputStreamSupplier inputStreamSupplier) {
+            return new FileEntryImpl(path, false, inputStreamSupplier);
+        }
+
+        static FileEntryImpl newDirectoryEntry(Path path) {
+            return new FileEntryImpl(path, true, () -> {
+                throw new IOException("Cannot read a directory");
+            });
+        }
+
         private final Path m_path;
         private final boolean m_directory;
         private final InputStreamSupplier m_inputStreamSupplier;
