@@ -25,9 +25,6 @@ public class JConfigImpl implements JConfig {
     private static final String SECTION_OVERWRITE = "overwrite";
     private static final String SECTION_MERGE = "merge";
     private static final String SECTION_DELETE = "delete";
-    private static final InputStreamSupplier CANNOT_READ_A_DIRECTORY_INPUT_STREAM_SUPPLIER = () -> {
-        throw new IOException("Cannot read a directory");
-    };
 
     private final Path m_targetDir;
     private final Predicate<Path> m_pathFilter;
@@ -74,7 +71,14 @@ public class JConfigImpl implements JConfig {
         if (Files.isDirectory(source)) {
             try (Stream<Path> walk = Files.walk(source)) {
                 merge(walk.
-                        map(path -> new FileEntryImpl(source.relativize(path), Files.isDirectory(path), () -> Files.newInputStream(path))).
+                        map(path -> {
+                            Path relativePath = source.relativize(path);
+                            if (Files.isDirectory(path)) {
+                                return newDirectoryEntry(relativePath);
+                            } else {
+                                return newRegularFileEntry(relativePath, () -> Files.newInputStream(path));
+                            }
+                        }).
                         filter(fileEntry -> m_pathFilter.test(fileEntry.path())));
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
@@ -209,19 +213,29 @@ public class JConfigImpl implements JConfig {
         for (int i = 1; i < path.getNameCount(); i++) {
             Path parent = path.subpath(0, i);
             if (directories.add(parent)) {
-                result.add(new FileEntryImpl(parent, true, CANNOT_READ_A_DIRECTORY_INPUT_STREAM_SUPPLIER));
+                result.add(newDirectoryEntry(parent));
             }
         }
 
         // Append zip entry
-        // Always add it if it's a file, if it's a directory we check if we don't already haveit
+        // Always add it if it's a file, if it's a directory we check if we don't already have it
         if (!zipEntry.isDirectory()) {
-            result.add(new FileEntryImpl(path, false, () -> zipFile.getInputStream(zipEntry)));
+            result.add(newRegularFileEntry(path, () -> zipFile.getInputStream(zipEntry)));
         } else if (directories.add(path)) {
-            result.add(new FileEntryImpl(path, true, CANNOT_READ_A_DIRECTORY_INPUT_STREAM_SUPPLIER));
+            result.add(newDirectoryEntry(path));
         }
 
         return result;
+    }
+
+    private FileEntryImpl newRegularFileEntry(Path path, InputStreamSupplier inputStreamSupplier) {
+        return new FileEntryImpl(path, false, inputStreamSupplier);
+    }
+
+    private FileEntryImpl newDirectoryEntry(Path path) {
+        return new FileEntryImpl(path, true, () -> {
+            throw new IOException("Cannot read a directory");
+        });
     }
 
     //region apply related code
@@ -415,7 +429,7 @@ public class JConfigImpl implements JConfig {
     }
     //endregion
 
-    private static class Section {
+    private static final class Section {
         private final String m_path;
         @Nullable
         private final Diff m_diff;
